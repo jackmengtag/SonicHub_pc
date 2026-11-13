@@ -1,0 +1,270 @@
+<script setup lang="ts">
+import { computed, nextTick, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import AppIcon from '../components/AppIcon.vue';
+import AppModal from '../components/AppModal.vue';
+import EmptyState from '../components/EmptyState.vue';
+import { resolveMedia } from '../api/client';
+import {
+  addWorkComment,
+  createShareLink,
+  deleteComment,
+  followUser,
+  getUserProfile,
+  getWork,
+  getWorkComments,
+  trackShareEvent,
+  unfollowUser,
+} from '../api/modules';
+import { useAuthStore } from '../stores/auth';
+import { usePlayerStore } from '../stores/player';
+import { useUiStore } from '../stores/ui';
+import { coverClass, formatCount, formatDuration, initial, relativeTime } from '../utils/format';
+import type { Comment, Work } from '../types/api';
+
+const route = useRoute();
+const router = useRouter();
+const player = usePlayerStore();
+const auth = useAuthStore();
+const ui = useUiStore();
+const work = ref<Work | null>(null);
+const loading = ref(false);
+const error = ref('');
+const comments = ref<Comment[]>([]);
+const commentsLoading = ref(false);
+const commentsError = ref('');
+const commentText = ref('');
+const sending = ref(false);
+const following = ref(false);
+const followLoading = ref(false);
+const shareOpen = ref(false);
+const shareLoading = ref(false);
+const shareUrl = ref('');
+const shareCode = ref('');
+const shareInput = ref<HTMLInputElement | null>(null);
+const commentList = ref<HTMLElement | null>(null);
+const wave = Array.from({ length: 42 }, (_, index) => 10 + (index * 17 % 30));
+let sequence = 0;
+
+const active = computed(() => Boolean(work.value && player.current?.id === work.value.id));
+const isPlaying = computed(() => active.value && player.playing);
+const elapsed = computed(() => active.value ? player.currentTime : 0);
+const total = computed(() => active.value && player.duration ? player.duration : work.value?.duration_seconds || 0);
+const progress = computed(() => total.value ? Math.min(100, elapsed.value / total.value * 100) : 0);
+const isSelf = computed(() => Boolean(work.value && auth.user?.id === work.value.owner_id));
+const tags = computed(() => {
+  if (!work.value) return [];
+  const values = (work.value.tags || []).filter(Boolean);
+  return values.length ? values : [work.value.genre || '未设置风格'];
+});
+
+async function load(id: string) {
+  if (!id) {
+    if (player.current) {
+      work.value = player.current;
+      await loadComments(player.current.id);
+      return;
+    }
+    error.value = '还没有选择要播放的作品';
+    return;
+  }
+  const current = ++sequence;
+  loading.value = true;
+  error.value = '';
+  try {
+    const data = await getWork(id);
+    if (current !== sequence) return;
+    work.value = data;
+    player.syncWork(data);
+    await Promise.all([loadComments(id), loadProfile(data.owner_id)]);
+  } catch (reason) {
+    if (current === sequence) error.value = ui.errorText(reason);
+  } finally {
+    if (current === sequence) loading.value = false;
+  }
+}
+
+async function loadProfile(id: string) {
+  if (id === auth.user?.id) return;
+  try {
+    const profile = await getUserProfile(id);
+    following.value = profile.user.following;
+  } catch {
+    following.value = false;
+  }
+}
+
+async function loadComments(id: string) {
+  commentsLoading.value = true;
+  commentsError.value = '';
+  try {
+    const result = await getWorkComments(id, { limit: 100 });
+    comments.value = result.items || [];
+  } catch (reason) {
+    commentsError.value = ui.errorText(reason);
+  } finally {
+    commentsLoading.value = false;
+  }
+}
+
+async function togglePlayback() {
+  if (!work.value) return;
+  const queue = player.queue.some((item) => item.id === work.value?.id) ? player.queue : [work.value];
+  await player.toggle(work.value, queue);
+}
+
+function seek(event: MouseEvent) {
+  if (!active.value || !total.value) return;
+  const target = event.currentTarget as HTMLElement;
+  const rect = target.getBoundingClientRect();
+  player.seek(Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)) * total.value);
+}
+
+async function like() {
+  if (!work.value) return;
+  try { await player.like(work.value); } catch (reason) { ui.showError(reason); }
+}
+
+async function collect() {
+  if (!work.value) return;
+  try {
+    await player.collect(work.value);
+    ui.showToast(work.value.collected ? '已收藏' : '已取消收藏');
+  } catch (reason) { ui.showError(reason); }
+}
+
+async function toggleFollow() {
+  if (!work.value || isSelf.value) return;
+  followLoading.value = true;
+  try {
+    const result = following.value ? await unfollowUser(work.value.owner_id) : await followUser(work.value.owner_id);
+    following.value = result.following;
+    ui.showToast(result.following ? (result.friend ? '已互相关注，可以私信了' : '已关注') : '已取消关注');
+  } catch (reason) { ui.showError(reason); } finally { followLoading.value = false; }
+}
+
+async function sendComment() {
+  if (!work.value || sending.value) return;
+  const content = commentText.value.trim();
+  if (!content) { ui.showToast('评论不能为空'); return; }
+  if (content.length > 200) { ui.showToast('评论最多 200 字'); return; }
+  sending.value = true;
+  try {
+    const comment = await addWorkComment(work.value.id, { content });
+    comments.value.unshift(comment);
+    work.value.comment_count = (work.value.comment_count || 0) + 1;
+    player.syncWork(work.value);
+    commentText.value = '';
+    await nextTick();
+    commentList.value?.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (reason) { ui.showError(reason); } finally { sending.value = false; }
+}
+
+async function removeComment(comment: Comment) {
+  if (!work.value || comment.user_id !== auth.user?.id || !window.confirm('删除这条评论？')) return;
+  try {
+    await deleteComment(comment.id);
+    comments.value = comments.value.filter((item) => item.id !== comment.id);
+    work.value.comment_count = Math.max(0, (work.value.comment_count || 0) - 1);
+    player.syncWork(work.value);
+  } catch (reason) { ui.showError(reason); }
+}
+
+async function openShare() {
+  if (!work.value) return;
+  shareOpen.value = true;
+  shareLoading.value = true;
+  shareUrl.value = '';
+  shareCode.value = '';
+  try {
+    const result = await createShareLink({ work_id: work.value.id });
+    shareCode.value = result.code;
+    shareUrl.value = resolveMedia(result.url || `/api/v1/s/${result.code}`);
+  } catch (reason) {
+    ui.showError(reason);
+    shareOpen.value = false;
+  } finally { shareLoading.value = false; }
+}
+
+async function copyShare() {
+  if (!shareUrl.value) return;
+  try {
+    await navigator.clipboard.writeText(shareUrl.value);
+  } catch {
+    shareInput.value?.focus();
+    shareInput.value?.select();
+    document.execCommand('copy');
+  }
+  if (shareCode.value) void trackShareEvent({ code: shareCode.value, channel: 'clipboard', event_type: 'copy' }).catch(() => undefined);
+  ui.showToast('分享链接已复制');
+}
+
+watch(() => route.params.workId, (id) => {
+  comments.value = [];
+  work.value = null;
+  void load(typeof id === 'string' ? id : '');
+}, { immediate: true });
+</script>
+
+<template>
+  <div class="view">
+    <EmptyState v-if="loading || error || !work" :loading="loading" :error="error" title="选择一首作品开始播放" description="你可以从发现、广场或搜索结果进入播放页。" @retry="load(String(route.params.workId || ''))" />
+    <div v-else class="player-view">
+      <section class="player-main">
+        <div class="player-left">
+          <div class="player-cover-wrap">
+            <div class="player-cover-glow" />
+            <div class="cover cover-lg" :class="coverClass(work.cover, work.id)"><span class="cover-vinyl" /></div>
+          </div>
+          <div class="player-info">
+            <p class="eyebrow accent">{{ work.is_ai ? 'AI GENERATED WORK' : 'ORIGINAL WORK' }}</p>
+            <h2>{{ work.title || '未命名作品' }}</h2>
+            <div class="artist-actions-row">
+                              <button class="artist-inline" type="button" @click="router.push({ name: 'artist', params: { id: work.owner_id } })"><span class="avatar sm" :class="coverClass(work.owner_avatar, work.owner_id)">{{ initial(work.owner_name) }}</span><span><b>{{ work.owner_name }}</b><em>{{ work.owner_verified ? '已认证音乐人' : 'SonicHub 创作者' }}</em></span></button>
+              <button v-if="!isSelf" class="btn btn-ghost sm" type="button" :disabled="followLoading" @click="toggleFollow">{{ following ? '已关注' : '+ 关注' }}</button>
+            </div>
+            <div class="player-tags"><span v-for="tag in tags" :key="tag" class="tag">{{ tag }}</span></div>
+            <div class="player-wave" :class="{ 'is-paused': !isPlaying }" aria-hidden="true"><i v-for="(height, index) in wave" :key="index" :style="{ height: `${height}px`, animationDelay: `${index * -0.04}s` }" /></div>
+            <div class="player-progress">
+              <div class="progress big" role="slider" tabindex="0" aria-label="播放进度" :aria-valuenow="Math.round(progress)" aria-valuemin="0" aria-valuemax="100" @click="seek"><i :style="{ width: `${progress}%` }" /></div>
+              <div class="progress-time mono"><span>{{ formatDuration(elapsed) }}</span><span>{{ formatDuration(total) }}</span></div>
+            </div>
+            <div class="player-controls">
+              <button class="icon-btn" :class="{ 'is-on': player.shuffle }" type="button" title="随机播放" @click="player.shuffle = !player.shuffle"><AppIcon name="shuffle" /></button>
+              <button class="icon-btn lg" type="button" title="上一首" :disabled="!player.queue.length" @click="player.previous()"><AppIcon name="skip-back" /></button>
+              <button class="play-fab" type="button" :title="isPlaying ? '暂停' : '播放'" @click="togglePlayback"><AppIcon :name="isPlaying ? 'pause' : 'play'" size="lg" /></button>
+              <button class="icon-btn lg" type="button" title="下一首" :disabled="!player.queue.length" @click="player.next()"><AppIcon name="skip-forward" /></button>
+              <button class="icon-btn" :class="{ 'is-on': player.repeat }" type="button" title="单曲循环" @click="player.repeat = !player.repeat"><AppIcon name="repeat" /></button>
+            </div>
+            <p v-if="!work.audio_url" class="inline-status error"><AppIcon name="alert" size="sm" />该作品暂无可播放音频</p>
+            <div class="player-actions">
+              <button class="action-btn" :class="{ 'is-on': work.liked }" type="button" @click="like"><AppIcon name="heart" size="sm" />{{ work.liked ? '已喜欢' : '喜欢' }} · {{ formatCount(work.like_count) }}</button>
+              <button class="action-btn" :class="{ 'is-on': work.collected }" type="button" @click="collect"><AppIcon name="star" size="sm" />{{ work.collected ? '已收藏' : '收藏' }}</button>
+              <button class="action-btn" type="button" @click="openShare"><AppIcon name="share" size="sm" />分享</button>
+              <span class="player-plays mono muted">{{ formatCount(work.play_count) }} 次播放</span>
+            </div>
+          </div>
+        </div>
+        <section class="panel work-description"><div class="panel-head"><h3>作品简介</h3><span class="mono">{{ relativeTime(work.published_at || work.created_at) }}</span></div><p>{{ work.description || '创作者还没有填写作品简介。' }}</p></section>
+      </section>
+
+      <section class="panel comments-panel">
+        <div class="panel-head"><h3><AppIcon name="message" size="sm" />评论</h3><span class="mono">{{ work.comment_count || comments.length }}</span></div>
+        <form class="comment-input" @submit.prevent="sendComment"><input v-model="commentText" maxlength="200" placeholder="说点什么，让创作者听见…" aria-label="发表评论"><button class="icon-btn" type="submit" title="发送评论" :disabled="sending || !commentText.trim()"><AppIcon name="send" size="sm" /></button></form>
+        <div ref="commentList" class="comment-list">
+          <EmptyState v-if="commentsLoading || commentsError || !comments.length" :loading="commentsLoading" :error="commentsError" title="还没有评论" description="成为第一个与创作者交流的人。" icon="message" @retry="loadComments(work.id)" />
+          <article v-for="comment in comments" v-else :key="comment.id" class="comment-row">
+            <span class="avatar sm" :class="coverClass(comment.avatar, comment.user_id)">{{ initial(comment.name) }}</span>
+            <div class="comment-main"><div class="comment-head"><b>{{ comment.name || '听众' }}</b><span class="mono">{{ relativeTime(comment.created_at) }}</span></div><p>{{ comment.content }}</p></div>
+            <button v-if="comment.user_id === auth.user?.id" class="icon-btn tiny" type="button" title="删除评论" @click="removeComment(comment)"><AppIcon name="trash" size="sm" /></button>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <AppModal :open="shareOpen" title="分享作品" @close="shareOpen = false">
+      <div v-if="shareLoading" class="loading-box"><span class="spinner" /><span>正在创建分享链接…</span></div>
+      <div v-else class="share-dialog"><p class="muted">复制真实分享地址，公开作品可通过该地址访问。</p><div class="share-url"><input ref="shareInput" :value="shareUrl" readonly aria-label="分享地址"><button class="btn btn-primary sm" type="button" @click="copyShare">复制链接</button></div><p v-if="work" class="share-work"><b>{{ work.title }}</b><span>{{ work.owner_name }}</span></p></div>
+    </AppModal>
+  </div>
+</template>
