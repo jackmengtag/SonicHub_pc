@@ -13,6 +13,7 @@ import {
   getUserProfile,
   getWork,
   getWorkComments,
+  getWorkLyrics,
   trackShareEvent,
   unfollowUser,
 } from '../api/modules';
@@ -43,6 +44,10 @@ const shareUrl = ref('');
 const shareCode = ref('');
 const shareInput = ref<HTMLInputElement | null>(null);
 const commentList = ref<HTMLElement | null>(null);
+const lyricsText = ref('');
+const lyricsLoading = ref(false);
+const lyricBox = ref<HTMLElement | null>(null);
+const activeLine = ref(-1);
 const wave = Array.from({ length: 42 }, (_, index) => 10 + (index * 17 % 30));
 let sequence = 0;
 
@@ -58,11 +63,108 @@ const tags = computed(() => {
   return values.length ? values : [work.value.genre || '未设置风格'];
 });
 
+interface LyricLine { text: string; time: number; }
+
+const LRC_STAMP = /\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]/g;
+
+function parseLrc(raw: string): LyricLine[] {
+  const lines: LyricLine[] = [];
+  for (const rawLine of raw.split(/\r?\n/)) {
+    const text = rawLine.replace(LRC_STAMP, '').trim();
+    if (!text) continue;
+    for (const stamp of rawLine.matchAll(LRC_STAMP)) {
+      const fraction = stamp[3] ? Number(`0.${stamp[3].padEnd(3, '0')}`) : 0;
+      lines.push({ text, time: Number(stamp[1]) * 60 + Number(stamp[2]) + fraction });
+    }
+  }
+  return lines.sort((a, b) => a.time - b.time);
+}
+
+// 无时间戳时按行字数权重把歌词铺满音频时长，保证与演唱大致同步。
+function estimateLines(raw: string, lyricsDuration: number): LyricLine[] {
+  const rows = raw.split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !/^[\[【(（].{0,24}[\]】)）]$/.test(line));
+  if (!rows.length) return [];
+  const span = lyricsDuration > 1 ? lyricsDuration : 180;
+  const intro = Math.min(10, Math.max(3, span * 0.06));
+  const outro = Math.max(2, span * 0.04);
+  const usable = Math.max(span - intro - outro, span * 0.6);
+  const weights = rows.map((line) => Math.max(4, line.replace(/\s/g, '').length));
+  const weightSum = weights.reduce((sum, weight) => sum + weight, 0);
+  let cursor = intro;
+  return rows.map((text, index) => {
+    const time = cursor;
+    cursor += usable * weights[index] / weightSum;
+    return { text, time };
+  });
+}
+
+const lyricLines = computed<LyricLine[]>(() => {
+  const raw = lyricsText.value.trim();
+  if (!raw) return [];
+  const timed = parseLrc(raw);
+  return timed.length >= 2 ? timed : estimateLines(raw, total.value);
+});
+
+async function loadLyrics(id: string) {
+  if (!id) {
+    lyricsText.value = '';
+    return;
+  }
+  lyricsLoading.value = true;
+  try {
+    const result = await getWorkLyrics(id);
+    lyricsText.value = result.lyrics || '';
+  } catch {
+    lyricsText.value = '';
+  } finally {
+    lyricsLoading.value = false;
+  }
+}
+
+watch(elapsed, (value) => {
+  const lines = lyricLines.value;
+  if (!lines.length || !active.value) {
+    activeLine.value = -1;
+    return;
+  }
+  let next = -1;
+  for (let index = 0; index < lines.length; index += 1) {
+    if (value + 0.12 >= lines[index].time) next = index;
+    else break;
+  }
+  if (next !== activeLine.value) activeLine.value = next;
+});
+
+watch(lyricLines, () => { activeLine.value = -1; });
+
+watch(activeLine, async (index) => {
+  if (index < 0) return;
+  await nextTick();
+  const box = lyricBox.value;
+  const node = box?.querySelector<HTMLElement>('.lyric-line.is-active');
+  if (!box || !node) return;
+  const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  box.scrollTo({ top: node.offsetTop - box.clientHeight / 2 + node.clientHeight / 2, behavior: smooth ? 'smooth' : 'auto' });
+});
+
+async function seekToLine(line: LyricLine) {
+  if (!work.value) return;
+  if (!active.value) {
+    await togglePlayback();
+    window.setTimeout(() => player.seek(line.time), 400);
+    return;
+  }
+  player.seek(line.time);
+}
+
 async function load(id: string) {
   if (!id) {
     if (player.current) {
       work.value = player.current;
       await loadComments(player.current.id);
+      void loadLyrics(player.current.id);
       return;
     }
     error.value = '还没有选择要播放的作品';
@@ -76,7 +178,7 @@ async function load(id: string) {
     if (current !== sequence) return;
     work.value = data;
     player.syncWork(data);
-    await Promise.all([loadComments(id), loadProfile(data.owner_id)]);
+    await Promise.all([loadComments(id), loadProfile(data.owner_id), loadLyrics(id)]);
   } catch (reason) {
     if (current === sequence) error.value = ui.errorText(reason);
   } finally {
@@ -202,6 +304,8 @@ async function copyShare() {
 watch(() => route.params.workId, (id) => {
   comments.value = [];
   work.value = null;
+  lyricsText.value = '';
+  activeLine.value = -1;
   void load(typeof id === 'string' ? id : '');
 }, { immediate: true });
 </script>
@@ -245,6 +349,14 @@ watch(() => route.params.workId, (id) => {
             </div>
           </div>
         </div>
+        <section class="panel lyrics-panel" aria-label="歌词">
+          <div class="panel-head"><h3><AppIcon name="music" size="sm" />歌词</h3><span class="mono">{{ lyricLines.length ? '随播放同步' : '暂无' }}</span></div>
+          <div v-if="lyricsLoading" class="lyrics-loading"><span class="spinner" /><span>正在载入歌词…</span></div>
+          <p v-else-if="!lyricLines.length" class="lyrics-empty">该作品暂无歌词</p>
+          <div v-else ref="lyricBox" class="lyrics-body">
+            <button v-for="(line, index) in lyricLines" :key="`${line.time}-${index}`" class="lyric-line" :class="{ 'is-active': index === activeLine, 'is-past': index < activeLine }" type="button" @click="seekToLine(line)">{{ line.text }}</button>
+          </div>
+        </section>
         <section class="panel work-description"><div class="panel-head"><h3>作品简介</h3><span class="mono">{{ relativeTime(work.published_at || work.created_at) }}</span></div><p>{{ work.description || '创作者还没有填写作品简介。' }}</p></section>
       </section>
 

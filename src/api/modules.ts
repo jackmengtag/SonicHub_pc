@@ -90,6 +90,10 @@ export function getWork(id: string): Promise<DTO.Work> {
   return request<DTO.Work>(`/api/v1/works/${encodeURIComponent(id)}`);
 }
 
+export function getWorkLyrics(id: string): Promise<DTO.WorkLyrics> {
+  return request<DTO.WorkLyrics>(`/api/v1/works/${encodeURIComponent(id)}/lyrics`);
+}
+
 export function deleteWork(id: string): Promise<DTO.DeleteResult> {
   return request<DTO.DeleteResult>(`/api/v1/works/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }

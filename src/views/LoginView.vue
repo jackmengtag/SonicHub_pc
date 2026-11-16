@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { base, clearSession, request, setBase } from '../api/client';
+import { base, clearSession, getSession, request, setBase } from '../api/client';
 import { sendSmsCode } from '../api/modules';
 import { useAuthStore } from '../stores/auth';
 import { useUiStore } from '../stores/ui';
@@ -20,6 +20,7 @@ const sending = ref(false);
 const countdown = ref(0);
 const connected = ref<boolean | null>(null);
 const error = ref('');
+const demoCode = ref('');
 let countdownTimer: number | null = null;
 const apiHost = computed(() => apiBase.value.replace(/^https?:\/\//, '').replace(/\/+$/, ''));
 const waveHeights = [22, 48, 34, 72, 54, 88, 42, 64, 30, 78, 50, 36, 60, 26, 44, 68];
@@ -58,9 +59,11 @@ async function sendCode() {
     const data = await sendSmsCode(phone.value.trim());
     if (data.demo && data.demo_code) {
       code.value = data.demo_code;
+      demoCode.value = data.demo_code;
       ui.showToast(data.message || `演示模式：验证码 ${data.demo_code}`);
     } else {
       code.value = '';
+      demoCode.value = '';
       ui.showToast(data.message || '验证码已发送，请注意查收');
     }
     startCountdown(data.interval_seconds && data.interval_seconds > 0 ? data.interval_seconds : 60);
@@ -90,6 +93,7 @@ function stopCountdown() {
 }
 
 async function submit() {
+  if (loading.value) return;
   error.value = '';
   if (!/^1\d{10}$/.test(phone.value.trim())) {
     error.value = '请输入 11 位手机号';
@@ -113,7 +117,15 @@ async function submit() {
     const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/')
       ? route.query.redirect
       : '/discover';
-    await router.replace(redirect);
+    try {
+      await router.replace(redirect);
+    } catch (navError) {
+      // A stale guard state (e.g. after HMR) can reject the navigation even though
+      // the session is valid; fall back to a full page load of the same target.
+      console.warn('[login] router navigation failed, reloading target', navError);
+      if (!getSession()?.access_token) throw navError;
+      window.location.assign(router.resolve(redirect).href);
+    }
   } catch (err) {
     error.value = ui.errorText(err);
     connected.value = false;
@@ -153,7 +165,8 @@ onUnmounted(stopCountdown);
         </label>
         <label class="field">
           <span class="field-label">验证码</span>
-          <div class="code-row"><input v-model="code" type="tel" maxlength="6" autocomplete="one-time-code" placeholder="请输入验证码"><button class="text-btn accent" type="button" :disabled="sending || countdown > 0" @click="sendCode">{{ sending ? '发送中…' : countdown > 0 ? `${countdown}s 后重发` : '获取验证码' }}</button></div>
+          <div class="code-row"><input v-model="code" type="tel" maxlength="6" autocomplete="one-time-code" :placeholder="demoCode ? `演示验证码 ${demoCode}` : '请输入验证码'"><button class="text-btn accent" type="button" :disabled="sending || countdown > 0" @click="sendCode">{{ sending ? '发送中…' : countdown > 0 ? `${countdown}s 后重发` : '获取验证码' }}</button></div>
+          <span v-if="demoCode" class="field-hint">演示环境不发送真实短信，验证码固定为 <b>{{ demoCode }}</b>，已自动填入</span>
         </label>
         <label class="field">
           <span class="field-label">API 服务器</span>

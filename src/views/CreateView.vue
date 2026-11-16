@@ -39,6 +39,8 @@ const DURATION_OPTIONS = [
   { label: '60 秒', value: 60 },
   { label: '1.5 分钟', value: 90 },
   { label: '2 分钟', value: 120 },
+  { label: '3 分钟', value: 180 },
+  { label: '5 分钟', value: 300 },
 ];
 
 const STAGE_LABELS: Record<string, string> = {

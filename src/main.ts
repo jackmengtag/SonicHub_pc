@@ -9,6 +9,7 @@ app.use(createPinia());
 app.use(router);
 
 window.addEventListener('sh:unauthorized', () => {
+  if (router.currentRoute.value.name === 'login') return;
   void router.push({ name: 'login', query: { reason: 'expired' } });
 });
 

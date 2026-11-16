@@ -76,6 +76,10 @@ export interface MobileMusicResult {
   poll_url: string;
 }
 
+export interface WorkLyrics {
+  lyrics: string;
+}
+
 export interface Work {
   id: string;
   title: string;

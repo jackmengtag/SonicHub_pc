@@ -2,8 +2,13 @@ import type { AuthSession, Health, OkResult } from '../types/api';
 
 export const BASE_KEY = 'sh_api';
 export const SESSION_KEY = 'sh_auth';
-export const DEFAULT_BASE = 'http://119.91.65.225:8080';
-const LEGACY_DEFAULT_BASES = new Set(['http://127.0.0.1:8080', 'http://127.0.0.1:8081']);
+export const DEFAULT_BASE = import.meta.env.DEV ? 'http://localhost:8080' : 'http://119.91.65.225:8080';
+const REMOTE_BASE = 'http://119.91.65.225:8080';
+const LEGACY_DEFAULT_BASES = new Set(
+  import.meta.env.DEV
+    ? ['http://127.0.0.1:8080', 'http://127.0.0.1:8081', REMOTE_BASE]
+    : ['http://127.0.0.1:8080', 'http://127.0.0.1:8081'],
+);
 
 export type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
