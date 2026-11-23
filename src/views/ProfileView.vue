@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { getMyWorks } from '../api/modules';
+import { getMyTags, getMyWorks } from '../api/modules';
 import AppIcon from '../components/AppIcon.vue';
 import AppModal from '../components/AppModal.vue';
 import EmptyState from '../components/EmptyState.vue';
@@ -10,7 +10,7 @@ import { useAuthStore } from '../stores/auth';
 import { usePlayerStore } from '../stores/player';
 import { useUiStore } from '../stores/ui';
 import { coverClass, formatCount, initial } from '../utils/format';
-import type { Work } from '../types/api';
+import type { MyTagsResult, Work } from '../types/api';
 
 const auth = useAuthStore();
 const player = usePlayerStore();
@@ -26,11 +26,17 @@ const editOpen = ref(false);
 const saving = ref(false);
 const saveError = ref('');
 const loggingOut = ref(false);
+const tagsLoading = ref(false);
+const myTags = ref<MyTagsResult | null>(null);
 const editForm = reactive({ display_name: '', bio: '' });
 
 const user = computed(() => auth.user);
 const musician = computed(() => auth.me?.musician || null);
 const recentWorks = computed(() => works.value.slice(0, 6));
+const maxAffinity = computed(() => Math.max(0.0001, ...(myTags.value?.affinity || []).map((item) => item.weight)));
+function barWidth(weight: number): number {
+  return Math.max(6, Math.round(weight / maxAffinity.value * 100));
+}
 const verified = computed(() => musician.value?.status === 'verified');
 const verification = computed(() => {
   const status = musician.value?.status;
@@ -66,6 +72,17 @@ async function loadWorks() {
     worksError.value = ui.errorText(reason);
   } finally {
     worksLoading.value = false;
+  }
+}
+
+async function loadTags() {
+  tagsLoading.value = true;
+  try {
+    myTags.value = await getMyTags();
+  } catch {
+    myTags.value = null;
+  } finally {
+    tagsLoading.value = false;
   }
 }
 
@@ -140,6 +157,7 @@ async function logout() {
 onMounted(() => {
   void loadProfile();
   void loadWorks();
+  void loadTags();
 });
 </script>
 
@@ -241,6 +259,29 @@ onMounted(() => {
             </button>
           </div>
         </aside>
+
+        <section class="panel taste-panel">
+          <div class="panel-head">
+            <h3><AppIcon name="sparkles" size="sm" />我的音乐标签</h3>
+            <button class="text-btn" type="button" @click="router.push({ name: 'discover' })">去发现</button>
+          </div>
+          <div v-if="tagsLoading" class="taste-empty"><span class="spinner" /><span>正在分析你的收听口味…</span></div>
+          <p v-else-if="!myTags || (!myTags.affinity.length && !myTags.tags.length)" class="taste-empty muted">
+            多听几首歌，我们会根据你的收听、喜欢与收藏逐步构建音乐画像。
+          </p>
+          <template v-else>
+            <div v-if="myTags.affinity.length" class="affinity-list">
+              <div v-for="item in myTags.affinity" :key="item.genre" class="affinity-row">
+                <span class="affinity-name">{{ item.genre }}</span>
+                <span class="affinity-bar"><i :style="{ width: `${barWidth(item.weight)}%` }" /></span>
+                <em class="mono">{{ Math.round(item.weight * 100) }}</em>
+              </div>
+            </div>
+            <div v-if="myTags.tags.length" class="taste-tags">
+              <span v-for="item in myTags.tags" :key="item.tag_id" class="tag" :title="`${item.category} · ${item.source}`">{{ item.name || item.code }}{{ item.value_label ? ` · ${item.value_label}` : '' }}</span>
+            </div>
+          </template>
+        </section>
       </div>
     </template>
   </section>

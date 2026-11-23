@@ -58,7 +58,7 @@ export function saveMyInterests(input: DTO.SaveInterestsRequest): Promise<DTO.Sa
   return request<DTO.SaveInterestsResult>('/api/v1/me/interests', { method: 'POST', body: input });
 }
 
-export function getRecommendFeed(params: DTO.PaginationQuery = {}): Promise<DTO.RecommendFeed> {
+export function getRecommendFeed(params: DTO.RecommendFeedQuery = {}): Promise<DTO.RecommendFeed> {
   return request<DTO.RecommendFeed>(withQuery('/api/v1/feed/recommend', params));
 }
 
@@ -72,6 +72,28 @@ export function submitFeedFeedback(input: DTO.FeedFeedbackRequest): Promise<DTO.
 
 export function getPlaza(params: DTO.PlazaQuery = {}): Promise<DTO.Page<DTO.Work>> {
   return request<DTO.Page<DTO.Work>>(withQuery('/api/v1/plaza', params));
+}
+
+export async function getGenres(): Promise<string[]> {
+  const result = await request<{ items: string[] }>('/api/v1/genres');
+  return result.items ?? [];
+}
+
+export async function getPopularTags(limit = 20): Promise<DTO.WorkTagCount[]> {
+  const result = await request<{ items: DTO.WorkTagCount[] }>(withQuery('/api/v1/tags/popular', { limit }));
+  return result.items ?? [];
+}
+
+export function getMyTags(): Promise<DTO.MyTagsResult> {
+  return request<DTO.MyTagsResult>('/api/v1/me/tags');
+}
+
+export function trackRecommendEvents(events: DTO.RecommendEventInput[]): Promise<DTO.OkResult> {
+  return request<DTO.OkResult>('/api/v1/recommendations/events', { method: 'POST', body: { events } });
+}
+
+export function submitRecommendationFeedback(input: DTO.RecommendFeedbackRequest): Promise<DTO.OkResult> {
+  return request<DTO.OkResult>('/api/v1/recommendations/feedback', { method: 'POST', body: input });
 }
 
 export function search(query: string): Promise<DTO.SearchResult> {

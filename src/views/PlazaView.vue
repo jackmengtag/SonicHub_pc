@@ -3,16 +3,23 @@ import { onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import EmptyState from '../components/EmptyState.vue';
 import WorkCard from '../components/WorkCard.vue';
-import { getPlaza } from '../api/modules';
+import { getGenres, getPlaza } from '../api/modules';
 import { usePlayerStore } from '../stores/player';
 import { useUiStore } from '../stores/ui';
 import type { Work } from '../types/api';
 
-const genres = ['全部', '电子', 'Lo-fi', '国风', '摇滚', '影视配乐', '纯音乐'];
+// 与音乐大模型支持的 22 种曲风（MuseFlow）保持一致，接口异常时作为兜底。
+const fallbackGenres = [
+  '流行', '民谣', '校园民谣', '国风', 'R&B', '乡村',
+  '摇滚', '朋克', '金属', '蓝调', '放克', '雷鬼',
+  '电子', 'Lo-fi', '氛围', '嘻哈',
+  '史诗管弦', '影视配乐', '古典', '爵士', '拉丁', '纯音乐',
+];
+const genres = ref([{ label: '全部', value: '' }]);
 const router = useRouter();
 const player = usePlayerStore();
 const ui = useUiStore();
-const genre = ref('全部');
+const genre = ref('');
 const sort = ref('new');
 const works = ref<Work[]>([]);
 const loading = ref(false);
@@ -26,7 +33,7 @@ async function load(reset = true) {
   if (reset) { loading.value = true; error.value = ''; } else loadingMore.value = true;
   try {
     const nextOffset = reset ? 0 : offset.value;
-    const result = await getPlaza({ genre: genre.value === '全部' ? undefined : genre.value, sort: sort.value, limit: 24, offset: nextOffset });
+    const result = await getPlaza({ genre: genre.value || undefined, sort: sort.value, limit: 24, offset: nextOffset });
     const items = result.items || [];
     works.value = reset ? items : [...works.value, ...items.filter((item) => !works.value.some((work) => work.id === item.id))];
     offset.value = nextOffset + items.length;
@@ -44,8 +51,23 @@ async function like(work: Work) {
   try { await player.like(work); } catch (reason) { ui.showError(reason); }
 }
 
+async function loadGenres() {
+  let list = fallbackGenres;
+  try {
+    const remote = await getGenres();
+    if (remote.length) list = remote;
+  } catch {
+    // 接口异常时保留兜底分类
+  }
+  genres.value = [{ label: '全部', value: '' }, ...list.filter(Boolean).map((item) => ({ label: item, value: item }))];
+  if (!genres.value.some((item) => item.value === genre.value)) genre.value = '';
+}
+
 watch([genre, sort], () => void load(true));
-onMounted(() => void load(true));
+onMounted(() => {
+  void loadGenres();
+  void load(true);
+});
 </script>
 
 <template>
@@ -55,7 +77,7 @@ onMounted(() => void load(true));
       <div class="view-head-side">已加载 <b>{{ works.length }}</b> 首作品</div>
     </header>
     <div class="filter-bar">
-      <div class="chips"><button v-for="item in genres" :key="item" class="chip" :class="{ 'is-active': genre === item }" type="button" @click="genre = item">{{ item }}</button></div>
+      <div class="chips"><button v-for="item in genres" :key="item.value" class="chip" :class="{ 'is-active': genre === item.value }" type="button" @click="genre = item.value">{{ item.label }}</button></div>
       <div class="seg-tabs"><button class="seg" :class="{ 'is-active': sort === 'new' }" type="button" @click="sort = 'new'">最新发布</button><button class="seg" :class="{ 'is-active': sort === 'hot' }" type="button" @click="sort = 'hot'">热门作品</button></div>
     </div>
     <EmptyState v-if="loading || error || !works.length" :loading="loading" :error="error" title="这个分类暂时没有公开作品" description="换一个风格或排序方式看看。" @retry="load(true)" />

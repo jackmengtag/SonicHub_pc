@@ -10,6 +10,7 @@ import {
   createShareLink,
   deleteComment,
   followUser,
+  getRecommendFeed,
   getUserProfile,
   getWork,
   getWorkComments,
@@ -48,8 +49,11 @@ const lyricsText = ref('');
 const lyricsLoading = ref(false);
 const lyricBox = ref<HTMLElement | null>(null);
 const activeLine = ref(-1);
+const similar = ref<Work[]>([]);
+const similarLoading = ref(false);
 const wave = Array.from({ length: 42 }, (_, index) => 10 + (index * 17 % 30));
 let sequence = 0;
+let similarSequence = 0;
 
 const active = computed(() => Boolean(work.value && player.current?.id === work.value.id));
 const isPlaying = computed(() => active.value && player.playing);
@@ -123,6 +127,26 @@ async function loadLyrics(id: string) {
   }
 }
 
+async function loadSimilar(id: string) {
+  const current = ++similarSequence;
+  similarLoading.value = true;
+  try {
+    const result = await getRecommendFeed({ scene: 'similar', seed: id, limit: 8 });
+    if (current !== similarSequence) return;
+    similar.value = (result.items || []).filter((item) => item.id !== id);
+  } catch {
+    if (current === similarSequence) similar.value = [];
+  } finally {
+    if (current === similarSequence) similarLoading.value = false;
+  }
+}
+
+async function playSimilar(item: Work) {
+  const list = [item, ...similar.value.filter((candidate) => candidate.id !== item.id)];
+  await player.play(item, list);
+  if (route.params.workId !== item.id) void router.push({ name: 'player', params: { workId: item.id } });
+}
+
 watch(elapsed, (value) => {
   const lines = lyricLines.value;
   if (!lines.length || !active.value) {
@@ -163,7 +187,7 @@ async function load(id: string) {
   if (!id) {
     if (player.current) {
       work.value = player.current;
-      await loadComments(player.current.id);
+      await Promise.all([loadComments(player.current.id), loadSimilar(player.current.id)]);
       void loadLyrics(player.current.id);
       return;
     }
@@ -178,7 +202,7 @@ async function load(id: string) {
     if (current !== sequence) return;
     work.value = data;
     player.syncWork(data);
-    await Promise.all([loadComments(id), loadProfile(data.owner_id), loadLyrics(id)]);
+    await Promise.all([loadComments(id), loadProfile(data.owner_id), loadLyrics(id), loadSimilar(id)]);
   } catch (reason) {
     if (current === sequence) error.value = ui.errorText(reason);
   } finally {
@@ -306,6 +330,8 @@ watch(() => route.params.workId, (id) => {
   work.value = null;
   lyricsText.value = '';
   activeLine.value = -1;
+  similar.value = [];
+  similarSequence += 1;
   void load(typeof id === 'string' ? id : '');
 }, { immediate: true });
 </script>
@@ -370,6 +396,21 @@ watch(() => route.params.workId, (id) => {
             <div class="comment-main"><div class="comment-head"><b>{{ comment.name || '听众' }}</b><span class="mono">{{ relativeTime(comment.created_at) }}</span></div><p>{{ comment.content }}</p></div>
             <button v-if="comment.user_id === auth.user?.id" class="icon-btn tiny" type="button" title="删除评论" @click="removeComment(comment)"><AppIcon name="trash" size="sm" /></button>
           </article>
+        </div>
+      </section>
+
+      <section v-if="similar.length || similarLoading" class="panel similar-panel">
+        <div class="panel-head"><h3><AppIcon name="sparkles" size="sm" />相似推荐</h3><span class="mono">{{ similarLoading ? 'LOADING' : 'FOR YOU' }}</span></div>
+        <div v-if="similarLoading" class="lyrics-loading"><span class="spinner" /><span>正在挑选相似作品…</span></div>
+        <div v-else class="similar-list">
+          <button v-for="item in similar" :key="item.id" class="similar-row" type="button" @click="playSimilar(item)">
+            <span class="cover cover-sm" :class="coverClass(item.cover, item.id)"><span class="cover-vinyl sm" /></span>
+            <span class="similar-main">
+              <b>{{ item.title || '未命名作品' }}</b>
+              <em>{{ item.owner_name || '未知音乐人' }}<template v-if="item.reason"> · {{ item.reason }}</template></em>
+            </span>
+            <span class="icon-btn tiny"><AppIcon :name="player.current?.id === item.id && player.playing ? 'pause' : 'play'" size="sm" /></span>
+          </button>
         </div>
       </section>
     </div>

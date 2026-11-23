@@ -478,6 +478,17 @@ svg { display: block; }
 .chip.is-active { background: var(--accent-soft); border-color: rgba(255,122,69,.42); color: var(--accent); font-weight: 600; }
 .chips.lg .chip { height: 36px; padding: 0 16px; font-size: 12.5px; }
 
+/* 发现页：推荐场景 + 标签筛选 */
+.discover-filter { gap: 12px; margin: -6px 0 18px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.02); }
+.discover-filter .discover-tag-chips { padding-left: 12px; border-left: 1px dashed var(--line); }
+.tag-chip em { font-style: normal; margin-left: 6px; font-size: 9.5px; opacity: .55; }
+.song-dislike { opacity: 0; transition: opacity .18s; }
+.song-row:hover .song-dislike, .song-dislike:focus-visible { opacity: 1; }
+@media (max-width: 900px) {
+  .discover-filter .discover-tag-chips { padding-left: 0; border-left: 0; }
+  .song-dislike { opacity: .6; }
+}
+
 .work-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 .work-card {
   border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden;
@@ -623,6 +634,20 @@ svg { display: block; }
 .comment-body b span { font-weight: 400; color: var(--text-3); font-size: 9.5px; margin-left: 6px; }
 .comment-body p { font-size: 11.5px; line-height: 1.7; color: var(--text-2); margin-top: 4px; }
 .comment-like { font-size: 9.5px; color: var(--text-3); display: flex; align-items: center; gap: 3px; margin-top: 5px; }
+.similar-panel { grid-column: 1 / -1; }
+.similar-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.similar-row {
+  display: flex; align-items: center; gap: 11px; width: 100%;
+  padding: 7px 9px; border-radius: 11px; border: 1px solid transparent;
+  text-align: left; transition: background .18s, border-color .18s, transform .18s;
+}
+.similar-row:hover { background: rgba(255,255,255,.04); border-color: var(--line); transform: translateX(2px); }
+.similar-row .cover { width: 44px; height: 44px; border-radius: 9px; }
+.similar-main { flex: 1; min-width: 0; }
+.similar-main b { display: block; font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.similar-main em { display: block; margin-top: 3px; font-style: normal; font-size: 10px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.similar-row .icon-btn { color: var(--text-3); pointer-events: none; }
+.similar-row:hover .icon-btn { color: var(--accent); }
 
 /* ---------- search ---------- */
 .search-head { max-width: 780px; margin: 6px auto 28px; text-align: center; }
@@ -711,6 +736,16 @@ svg { display: block; }
 .menu-row:hover { color: var(--text); }
 .menu-row em { margin-left: auto; font-style: normal; font-size: 10px; color: var(--text-3); font-family: var(--font-mono); }
 .menu-row svg.tiny { color: var(--text-3); }
+.taste-panel { grid-column: 1 / -1; }
+.taste-empty { display: flex; align-items: center; gap: 9px; font-size: 11.5px; line-height: 1.7; }
+.taste-empty .spinner { margin: 0; }
+.affinity-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px 22px; }
+.affinity-row { display: grid; grid-template-columns: 86px minmax(0, 1fr) 34px; align-items: center; gap: 10px; }
+.affinity-name { font-size: 11.5px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.affinity-bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.06); overflow: hidden; }
+.affinity-bar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, rgba(255,122,69,.85), var(--mint)); transition: width .4s var(--ease); }
+.affinity-row em { font-style: normal; font-size: 9.5px; color: var(--text-3); text-align: right; }
+.taste-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); }
 
 /* ---------- works ---------- */
 .work-list { display: flex; flex-direction: column; gap: 6px; }
@@ -979,6 +1014,7 @@ button:disabled { cursor: not-allowed; opacity: .5; }
   .player-tags { justify-content: center; }
   .player-actions { justify-content: center; flex-wrap: wrap; }
   .player-plays { margin-left: 0; }
+  .similar-list, .affinity-list { grid-template-columns: 1fr; }
   .messages-layout { grid-template-columns: 1fr; height: auto; }
   .msg-list-panel { max-height: 420px; }
   .chat-panel { min-height: 460px; }

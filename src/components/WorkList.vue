@@ -16,6 +16,7 @@ const emit = defineEmits<{
   play: [work: Work];
   open: [work: Work];
   like: [work: Work];
+  dislike: [work: Work];
   publish: [work: Work];
   visibility: [work: Work, visibility: string];
   delete: [work: Work];
@@ -61,6 +62,7 @@ function changeVisibility(work: Work, event: Event) {
       v-for="work in works"
       :key="work.id"
       class="song-row"
+      :data-work-id="work.id"
       :class="{ 'is-playing': work.id === currentId }"
       tabindex="0"
       @click="emit('open', work)"
@@ -98,6 +100,15 @@ function changeVisibility(work: Work, event: Event) {
           @click.stop="emit('like', work)"
         >
           <AppIcon name="heart" size="sm" />
+        </button>
+        <button
+          class="icon-btn tiny song-dislike"
+          type="button"
+          aria-label="不感兴趣"
+          title="不感兴趣，减少类似推荐"
+          @click.stop="emit('dislike', work)"
+        >
+          <AppIcon name="x" size="sm" />
         </button>
         <span class="song-dur">{{ formatDuration(work.duration_seconds) }}</span>
         <button

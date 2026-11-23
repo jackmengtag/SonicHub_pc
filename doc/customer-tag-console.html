@@ -1,0 +1,2327 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SonicHub · 客户标签治理台（演示原型）</title>
+<style>
+:root{
+  --bg:#090e0f; --side:#0a0f10; --panel:#0f1617; --panel2:#121b1c; --panel3:#162122;
+  --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.13);
+  --text:#eef3f2; --text2:#c2ccc9; --text3:#8b9895; --text4:#5f6d6a;
+  --accent:#ff7a45; --mint:#3ddc97; --gold:#f6c945; --danger:#ff6b6b; --blue:#6ea8fe;
+  --mono:'SFMono-Regular','JetBrains Mono',Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:radial-gradient(1100px 520px at 10% -10%,rgba(255,122,69,.08),transparent 60%),radial-gradient(900px 460px at 92% 0%,rgba(61,220,151,.045),transparent 55%),var(--bg);color:var(--text);font:13px/1.6 'Avenir Next','PingFang SC','Microsoft YaHei',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:inherit;text-decoration:none}
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* ---------- sidebar ---------- */
+.side{width:236px;flex:none;display:flex;flex-direction:column;background:rgba(10,15,16,.96);border-right:1px solid var(--line)}
+.brand{height:68px;display:flex;align-items:center;gap:11px;padding:0 18px;border-bottom:1px solid var(--line)}
+.brand-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#ff7a45,#ffb36b);color:#14100d;font-weight:800;font-size:12px;display:grid;place-items:center;box-shadow:0 6px 18px rgba(255,122,69,.25)}
+.brand b{display:block;font-size:13.5px;letter-spacing:.02em}
+.brand small{display:block;color:var(--text4);font-size:10px;letter-spacing:.09em}
+.nav{padding:12px 10px;flex:1;overflow:auto}
+.nav-label{padding:12px 12px 6px;color:#4f5c59;font-size:10px;letter-spacing:.14em}
+.nav-item{position:relative;width:100%;display:flex;align-items:center;gap:10px;padding:9px 12px;margin:1px 0;border:0;border-radius:8px;background:none;color:#a7b3b0;text-align:left;font-size:12.5px}
+.nav-item:hover{background:rgba(255,255,255,.035);color:#fff}
+.nav-item.active{background:rgba(255,122,69,.1);color:var(--accent)}
+.nav-item.active:before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:2px;border-radius:2px;background:var(--accent)}
+.nav-ico{width:16px;text-align:center;opacity:.9}
+.nav-count{margin-left:auto;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:rgba(255,255,255,.06);color:var(--text3);font-size:10px;display:grid;place-items:center}
+.nav-item.active .nav-count{background:rgba(255,122,69,.18);color:var(--accent)}
+.side-foot{border-top:1px solid var(--line);padding:14px 16px;display:flex;align-items:center;gap:9px}
+.avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#ffd08e,#c98a55);color:#241a11;display:grid;place-items:center;font-weight:800;font-size:11px}
+.side-foot b{display:block;font-size:12px}
+.side-foot small{display:block;color:var(--text4);font-size:10px}
+
+/* ---------- topbar ---------- */
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{height:68px;flex:none;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 26px;border-bottom:1px solid var(--line);background:rgba(9,14,15,.72);backdrop-filter:blur(8px)}
+.crumb{color:var(--text4);font-size:12px}
+.crumb b{color:var(--text);font-weight:600;margin-left:8px}
+.top-right{display:flex;align-items:center;gap:10px}
+.subject-switch{display:flex;padding:3px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.02)}
+.subject-switch button{border:0;background:none;color:var(--text3);padding:5px 10px;border-radius:6px;font-size:11.5px}
+.subject-switch button.on{background:rgba(255,122,69,.14);color:var(--accent)}
+.demo-pill{border:1px solid rgba(246,201,69,.28);background:rgba(246,201,69,.08);color:var(--gold);font-size:10px;padding:3px 8px;border-radius:20px;letter-spacing:.05em}
+.env{display:flex;align-items:center;gap:6px;color:var(--text3);font-size:11px}
+.env i{width:6px;height:6px;border-radius:50%;background:var(--text4)}
+.icon-btn{border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--text3);width:32px;height:32px;border-radius:8px;line-height:1}
+.icon-btn:hover{color:var(--text);border-color:var(--line2)}
+
+/* ---------- content ---------- */
+.content{flex:1;overflow:auto;padding:24px 26px 56px}
+.wrap{max-width:1380px;margin:0 auto}
+.view{animation:rise .24s ease}
+@keyframes rise{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.page-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:20px}
+.eyebrow{color:var(--accent);font-size:10px;letter-spacing:.18em;text-transform:uppercase}
+.page-head h1{margin:5px 0 5px;font-size:25px;letter-spacing:-.02em;font-weight:700}
+.page-head p{margin:0;color:var(--text3);font-size:12px;max-width:760px}
+.actions{display:flex;gap:8px;flex:none;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.btn{border:1px solid var(--line2);background:rgba(255,255,255,.03);color:var(--text2);border-radius:8px;padding:8px 13px;font-size:12px;transition:.16s}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#1b0e07;font-weight:700}
+.btn.primary:hover{background:#ff9163;color:#1b0e07}
+.btn.ghost{background:none}
+.btn.sm{padding:5px 9px;font-size:11px;border-radius:6px}
+.btn.danger{color:var(--danger);border-color:rgba(255,107,107,.35)}
+.btn:disabled{opacity:.42;cursor:not-allowed}
+.btn.primary:disabled:hover{background:var(--accent);color:#1b0e07}
+
+/* stat strip */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:11px;background:rgba(255,255,255,.018);margin-bottom:18px;overflow:hidden}
+.stats.five{grid-template-columns:repeat(5,1fr)}
+.stat{padding:15px 18px;border-right:1px solid var(--line);position:relative}
+.stat:last-child{border-right:0}
+.stat span{display:block;color:var(--text4);font-size:10.5px;letter-spacing:.04em}
+.stat b{display:block;font-size:23px;letter-spacing:-.03em;margin:3px 0 1px;font-variant-numeric:tabular-nums}
+.stat small{color:var(--text3);font-size:10.5px}
+.stat em{font-style:normal;color:var(--mint)}
+.stat em.warn{color:var(--gold)}
+.stat em.bad{color:var(--danger)}
+
+.panel{border:1px solid var(--line);border-radius:11px;background:rgba(255,255,255,.018)}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.panel-head h2{margin:0;font-size:13px;font-weight:600;letter-spacing:.01em}
+.panel-head .sub{color:var(--text4);font-size:11px}
+.panel-body{padding:16px}
+.mt{margin-top:18px}
+.grid-2{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:18px}
+.stack{display:flex;flex-direction:column;gap:16px}
+
+/* toolbar */
+.toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:13px 16px;border-bottom:1px solid var(--line)}
+.input,.select{height:33px;border:1px solid var(--line2);background:rgba(0,0,0,.22);border-radius:7px;padding:0 10px;color:var(--text);outline:none;font-size:12px}
+.input:focus,.select:focus{border-color:rgba(255,122,69,.55);box-shadow:0 0 0 2px rgba(255,122,69,.1)}
+.select{color:var(--text2)}
+.search{position:relative}
+.search .input{width:248px;padding-left:29px}
+.search span{position:absolute;left:10px;top:7px;color:var(--text4);font-size:12px}
+.grow{flex:1}
+.muted{color:var(--text4);font-size:11px}
+.mono{font-family:var(--mono);font-size:11px}
+.hint{color:var(--text4);font-size:10.5px;margin-top:5px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--text3);border-radius:20px;padding:4px 11px;font-size:11px}
+.chip.on{border-color:var(--accent);color:var(--accent);background:rgba(255,122,69,.08)}
+
+/* table */
+.table-wrap{overflow:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-weight:500;color:var(--text4);font-size:10.5px;letter-spacing:.06em;padding:10px 14px;border-bottom:1px solid var(--line);white-space:nowrap;background:rgba(255,255,255,.012)}
+td{padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.05);color:var(--text2);font-size:11.5px;vertical-align:middle}
+tbody tr:hover td{background:rgba(255,255,255,.022)}
+tbody tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:11px}
+.t-main{display:flex;flex-direction:column;gap:2px}
+.t-main b{color:var(--text);font-size:12px;font-weight:600}
+.t-main span{font-family:var(--mono);font-size:10px;color:var(--text4)}
+.right{text-align:right}
+.center{text-align:center}
+.row-hover{cursor:pointer}
+
+/* badges */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:5px;font-size:10px;line-height:1.7;white-space:nowrap;border:1px solid transparent}
+.b-fact{color:#9dc0ff;background:rgba(110,168,254,.1);border-color:rgba(110,168,254,.2)}
+.b-metric{color:#b9c6c3;background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1)}
+.b-rule{color:var(--mint);background:rgba(61,220,151,.09);border-color:rgba(61,220,151,.2)}
+.b-model{color:var(--gold);background:rgba(246,201,69,.08);border-color:rgba(246,201,69,.2)}
+.b-manual{color:var(--accent);background:rgba(255,122,69,.1);border-color:rgba(255,122,69,.22)}
+.b-active{color:var(--mint);background:rgba(61,220,151,.08);border-color:rgba(61,220,151,.18)}
+.b-active:before{content:"";width:5px;height:5px;border-radius:50%;background:var(--mint)}
+.b-draft{color:var(--text3);background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.1)}
+.b-pending{color:var(--accent);background:rgba(255,122,69,.09);border-color:rgba(255,122,69,.2)}
+.b-deprecated{color:var(--gold);background:rgba(246,201,69,.07);border-color:rgba(246,201,69,.18)}
+.b-archived{color:var(--text4);background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.07)}
+.b-expired{color:var(--danger);background:rgba(255,107,107,.07);border-color:rgba(255,107,107,.2)}
+.b-failed{color:var(--danger);background:rgba(255,107,107,.09);border-color:rgba(255,107,107,.22)}
+.b-running{color:var(--accent);background:rgba(255,122,69,.1);border-color:rgba(255,122,69,.24)}
+.b-running:before{content:"";width:5px;height:5px;border-radius:50%;background:var(--accent);animation:blink 1.1s infinite}
+@keyframes blink{50%{opacity:.25}}
+.b-succeeded{color:var(--mint);background:rgba(61,220,151,.08);border-color:rgba(61,220,151,.18)}
+.b-succeeded:before{content:"";width:5px;height:5px;border-radius:50%;background:var(--mint)}
+.b-queued{color:var(--text3);background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.1)}
+.b-sens{color:var(--danger);background:rgba(255,107,107,.07);border-color:rgba(255,107,107,.2)}
+.b-safe{color:var(--mint);background:rgba(61,220,151,.08);border-color:rgba(61,220,151,.2)}
+.b-high{color:var(--danger);background:rgba(255,107,107,.08);border-color:rgba(255,107,107,.22)}
+.b-mid{color:var(--gold);background:rgba(246,201,69,.08);border-color:rgba(246,201,69,.2)}
+.b-low{color:var(--text3);background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.1)}
+.b-allow{color:var(--mint);background:rgba(61,220,151,.08);border-color:rgba(61,220,151,.18)}
+.b-block{color:var(--danger);background:rgba(255,107,107,.07);border-color:rgba(255,107,107,.2)}
+.b-lock{color:var(--text3);background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.1)}
+.orange{color:var(--gold)}
+
+/* scenario board */
+.scen{display:grid;grid-template-columns:1fr 1fr}
+.scen-row{display:grid;grid-template-columns:26px minmax(120px,1.4fr) minmax(110px,1.2fr) 82px 74px;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid rgba(255,255,255,.05)}
+.scen-row:nth-child(odd){border-right:1px solid rgba(255,255,255,.05)}
+.scen-row:nth-last-child(-n+2){border-bottom:0}
+.scen-row .idx{width:22px;height:22px;border-radius:6px;background:rgba(255,122,69,.1);color:var(--accent);font-size:10px;display:grid;place-items:center;font-weight:700}
+.scen-row b{font-size:11.5px;font-weight:600;display:block}
+.scen-row small{color:var(--text4);font-size:10px;display:block}
+.scen-row .seg-code{font-family:var(--mono);font-size:10px;color:var(--text3)}
+.scen-row .cnt{font-family:var(--mono);font-size:11px;text-align:right}
+.scen-row .link{border:0;background:none;color:var(--accent);font-size:10.5px;text-align:right}
+
+/* alerts */
+.alert{display:flex;gap:10px;padding:11px 14px;border-radius:9px;border:1px solid rgba(246,201,69,.18);background:rgba(246,201,69,.05);color:#e7d9ad;font-size:11.5px;margin-bottom:9px}
+.alert:last-child{margin-bottom:0}
+.alert.orange{border-color:rgba(255,122,69,.2);background:rgba(255,122,69,.055);color:#ffcfb9}
+.alert.ok{border-color:rgba(61,220,151,.16);background:rgba(61,220,151,.05);color:#bfe9d5}
+.alert.bad{border-color:rgba(255,107,107,.2);background:rgba(255,107,107,.05);color:#ffc9c9}
+.alert b{font-weight:600}
+.alert .grow{flex:1;min-width:0}
+.alert.hintline{background:rgba(255,255,255,.02);border-color:var(--line);color:var(--text3)}
+
+/* bar */
+.bar{height:5px;background:rgba(255,255,255,.07);border-radius:5px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:5px;transition:width .4s ease}
+.bar.mint i{background:var(--mint)}
+.bar.gold i{background:var(--gold)}
+.bar.danger i{background:var(--danger)}
+.bar.sm{width:74px;display:inline-block;vertical-align:middle;margin-right:7px}
+.bar.lg{height:8px}
+
+/* drawer/modal */
+.mask{position:fixed;inset:0;background:rgba(3,7,8,.72);backdrop-filter:blur(2px);z-index:40;display:none}
+.mask.open{display:block}
+.drawer{position:absolute;right:0;top:0;height:100%;width:min(640px,100%);background:#0d1415;border-left:1px solid var(--line2);box-shadow:-20px 0 60px rgba(0,0,0,.5);display:flex;flex-direction:column;animation:slide .24s ease}
+@keyframes slide{from{transform:translateX(36px);opacity:.4}to{transform:none;opacity:1}}
+.drawer-head{padding:17px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.drawer-head h2{margin:3px 0 4px;font-size:17px}
+.drawer-head .code{font-family:var(--mono);font-size:10.5px;color:var(--text3)}
+.drawer-body{flex:1;overflow:auto;padding:18px 20px 40px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:16px;flex-wrap:wrap}
+.tab{border:0;background:none;color:var(--text4);padding:8px 11px;font-size:11.5px;border-bottom:2px solid transparent}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.kv{display:grid;grid-template-columns:104px 1fr;gap:8px 12px;font-size:11.5px;padding:11px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
+.kv span{color:var(--text4)}
+.kv b{font-weight:500;color:var(--text2)}
+.section-t{font-size:11px;color:var(--text4);letter-spacing:.06em;margin:18px 0 8px}
+.codebox{background:#070c0d;border:1px solid var(--line);border-radius:8px;padding:13px;font-family:var(--mono);font-size:10.5px;line-height:1.85;color:#b9d3cb;white-space:pre-wrap;overflow:auto}
+.codebox .kw{color:#ff9e6b}.codebox .str{color:#8bd7a8}.codebox .cm{color:#5d6f6b}
+.timeline{position:relative;padding-left:16px}
+.timeline:before{content:"";position:absolute;left:3px;top:6px;bottom:6px;width:1px;background:rgba(255,255,255,.09)}
+.tl-item{position:relative;padding:0 0 15px 0}
+.tl-item:before{content:"";position:absolute;left:-16px;top:4px;width:7px;height:7px;border-radius:50%;background:var(--panel3);border:1.5px solid var(--text4)}
+.tl-item.on:before{background:var(--accent);border-color:var(--accent)}
+.tl-item b{font-size:11.5px;display:block}
+.tl-item small{color:var(--text4);font-size:10px}
+
+.modal-root{position:fixed;inset:0;z-index:50;display:none;place-items:center;background:rgba(3,7,8,.72);backdrop-filter:blur(2px)}
+.modal-root.open{display:grid}
+.modal{width:min(480px,calc(100% - 28px));background:#0e1516;border:1px solid var(--line2);border-radius:12px;box-shadow:0 24px 70px rgba(0,0,0,.55);animation:pop .18s ease;max-height:calc(100vh - 48px);display:flex;flex-direction:column}
+.modal.wide{width:min(680px,calc(100% - 28px))}
+@keyframes pop{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+.modal-head{padding:16px 18px 12px;border-bottom:1px solid var(--line);flex:none}
+.modal-head h3{margin:0;font-size:15px}
+.modal-head p{margin:4px 0 0;color:var(--text4);font-size:11px}
+.modal-body{padding:16px 18px;overflow:auto}
+.modal-foot{padding:13px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px;flex:none}
+.form-row{margin-bottom:13px}
+.form-row label{display:flex;justify-content:space-between;align-items:center;color:var(--text3);font-size:11px;margin-bottom:6px}
+.form-row .input,.form-row .select{width:100%}
+.form-row textarea{width:100%;min-height:74px;resize:vertical;background:rgba(0,0,0,.22);border:1px solid var(--line2);border-radius:7px;padding:9px 10px;color:var(--text);outline:none;font-size:12px}
+.form-row textarea:focus{border-color:rgba(255,122,69,.55)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
+.check-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:6px}
+.check{display:flex;align-items:flex-start;gap:7px;border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-size:11px;color:var(--text2);background:rgba(255,255,255,.015)}
+.check input{margin:2px 0 0}
+.err-line{color:var(--danger);font-size:11px;margin-top:6px;min-height:16px}
+
+/* customer 360 */
+.c360{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px}
+.hero{display:flex;align-items:center;gap:13px;padding:16px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.hero .avatar{width:44px;height:44px;font-size:15px;flex:none}
+.hero h2{margin:0 0 2px;font-size:17px}
+.hero p{margin:0;color:var(--text4);font-size:11px;font-family:var(--mono)}
+.hero .badges{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.tgroup{border-bottom:1px solid rgba(255,255,255,.055);padding:13px 18px}
+.tgroup:last-child{border-bottom:0}
+.tgroup h3{margin:0 0 9px;font-size:10.5px;color:var(--text4);font-weight:500;letter-spacing:.07em}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:rgba(255,255,255,.025);font-size:11px}
+.tag i{width:5px;height:5px;border-radius:50%;background:var(--text4);font-style:normal}
+.tag.rule i{background:var(--mint)}.tag.model i{background:var(--gold)}.tag.manual i{background:var(--accent)}.tag.fact i{background:var(--blue)}
+.tag small{color:var(--text3);font-size:10px}
+.tag.sens{border-color:rgba(255,107,107,.22);background:rgba(255,107,107,.045)}
+.tag.exp{border-color:rgba(255,107,107,.3);background:rgba(255,107,107,.06)}
+.tag button{border:0;background:none;color:var(--accent);font-size:9.5px;padding:0 2px}
+.tag button.lock{color:var(--text4)}
+.rail .panel{margin-bottom:14px}
+.evt{display:flex;gap:9px;padding:8px 0;border-bottom:1px dashed rgba(255,255,255,.06);font-size:11px}
+.evt:last-child{border-bottom:0}
+.evt time{color:var(--text4);font-family:var(--mono);font-size:10px;min-width:74px;flex:none}
+.evt b{font-weight:500;display:block;color:var(--text2)}
+.evt small{color:var(--text4);font-size:10px}
+
+/* segment builder */
+.builder{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px}
+.cond{display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.02);margin-bottom:7px;flex-wrap:wrap}
+.cond.bad{border-color:rgba(255,107,107,.32);background:rgba(255,107,107,.05)}
+.cond .k{font-family:var(--mono);font-size:10.5px;color:var(--text3);min-width:170px}
+.cond .op{color:var(--accent);font-family:var(--mono);font-size:11px}
+.cond .v{color:var(--text);font-size:11.5px}
+.cond .why{width:100%;color:var(--danger);font-size:10px}
+.cond .rm{margin-left:auto;border:0;background:none;color:var(--text4);font-size:14px;padding:0 3px}
+.cond .rm:hover{color:var(--danger)}
+.logic{display:flex;align-items:center;gap:8px;margin:5px 0 10px;color:var(--text4);font-size:10.5px;flex-wrap:wrap}
+.logic button{border:1px solid var(--line);background:none;color:var(--text3);border-radius:5px;padding:2px 8px;font-size:10px}
+.logic button.on{border-color:var(--accent);color:var(--accent);background:rgba(255,122,69,.08)}
+.estimate{padding:16px}
+.estimate .big{font-size:31px;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.estimate .cap{color:var(--text4);font-size:10.5px;letter-spacing:.06em}
+.snap{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed rgba(255,255,255,.06);font-size:11px}
+.snap:last-child{border-bottom:0}
+.snap .mono{color:var(--text3);font-size:10px}
+.snap .grow{flex:1;min-width:0}
+
+/* empty */
+.empty{padding:38px 16px;text-align:center;color:var(--text4)}
+.empty b{display:block;color:var(--text2);font-size:12px;margin-bottom:4px}
+.empty p{margin:0;font-size:11px}
+
+/* switch */
+.switch{position:relative;width:42px;height:23px;border-radius:14px;border:1px solid var(--line2);background:rgba(255,255,255,.1);transition:.18s;flex:none}
+.switch b{position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:#cfd8d6;transition:.18s}
+.switch.on{background:rgba(61,220,151,.35);border-color:rgba(61,220,151,.5)}
+.switch.on b{left:21px;background:var(--mint)}
+
+/* purpose cards */
+.purposes{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.purpose{border:1px solid var(--line);border-radius:10px;padding:13px 14px;background:rgba(255,255,255,.018);text-align:left;transition:.16s}
+.purpose:hover{border-color:var(--line2)}
+.purpose.on{border-color:rgba(255,122,69,.5);background:rgba(255,122,69,.06)}
+.purpose b{display:block;font-size:12px;margin-bottom:2px}
+.purpose small{display:block;color:var(--text4);font-size:10px;line-height:1.6}
+.purpose .pf{display:flex;justify-content:space-between;align-items:center;margin-top:9px}
+
+/* toast */
+#toast{position:fixed;right:22px;bottom:22px;z-index:80;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.toast{background:#14201f;border:1px solid rgba(61,220,151,.35);color:#d7f5e6;border-radius:8px;padding:10px 14px;font-size:11.5px;box-shadow:0 12px 30px rgba(0,0,0,.5);animation:tin .2s ease;max-width:360px}
+.toast.err{border-color:rgba(255,107,107,.4);color:#ffd9d9;background:#201415}
+@keyframes tin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+@media(max-width:1180px){
+  .grid-2,.builder,.c360{grid-template-columns:1fr}
+  .scen{grid-template-columns:1fr}
+  .scen-row:nth-child(odd){border-right:0}
+  .scen-row:nth-last-child(-n+2){border-bottom:1px solid rgba(255,255,255,.05)}
+  .stats{grid-template-columns:1fr 1fr}
+  .stats.five{grid-template-columns:1fr 1fr}
+  .stat:nth-child(2){border-right:0}
+  .stat:nth-child(-n+2){border-bottom:1px solid var(--line)}
+  .purposes{grid-template-columns:1fr 1fr}
+}
+@media(max-width:820px){
+  .side{width:58px}
+  .brand{padding:0 11px}.brand div:not(.brand-mark){display:none}
+  .nav-label,.nav-item span:not(.nav-ico),.nav-count,.side-foot div{display:none}
+  .nav-item{justify-content:center;padding:10px 4px}
+  .topbar{padding:0 14px}.content{padding:18px 14px 40px}
+  .page-head{display:block}.actions{margin-top:13px;justify-content:flex-start}
+  .search .input{width:180px}
+  .scen-row{grid-template-columns:24px 1fr 84px;row-gap:4px}
+  .scen-row .seg-code{display:none}.scen-row .link{display:none}
+  .two-col,.three-col,.check-grid{grid-template-columns:1fr}
+  .purposes{grid-template-columns:1fr}
+  .demo-pill{display:none}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><div class="brand-mark">SH</div><div><b>SonicHub</b><small>TAG CONSOLE</small></div></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="side-foot"><div class="avatar">林</div><div><b>林岚</b><small>标签 Owner · 增长</small></div></div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <div class="crumb">客户运营 / <b id="crumb">标签资产总览</b></div>
+      <div class="top-right">
+        <span class="demo-pill" title="所有数据均为本地模拟，不连接真实后端">演示数据</span>
+        <div class="subject-switch" id="subjectSwitch"></div>
+        <button class="icon-btn" data-act="reset-demo" title="重置演示数据">⟲</button>
+        <button class="icon-btn" data-act="help" title="业务边界说明">?</button>
+        <div class="avatar" title="林岚">林</div>
+      </div>
+    </header>
+    <main class="content"><div class="wrap" id="app"></div></main>
+  </div>
+</div>
+<div class="mask" id="mask"><div class="drawer" id="drawer"></div></div>
+<div class="modal-root" id="modalRoot"></div>
+<div id="toast"></div>
+
+<script>
+/* =========================================================
+   常量
+   ========================================================= */
+const TODAY = '2026-11-19';
+const LAYERS = { fact:'事实', metric:'统计', rule:'规则', model:'模型', manual:'人工' };
+const STATUS = { active:'生效中', draft:'草稿', pending:'待审批', deprecated:'已废弃', archived:'已归档', expired:'已过期' };
+const SUBJECTS = { user:'用户', tenant:'租户', member:'成员' };
+const DOMAINS = {
+  profile:'资料', usage:'使用', creation:'创作', billing:'付费',
+  lifecycle:'生命周期', service:'服务', risk:'风险', health:'健康', listening:'听歌'
+};
+const ALLOWED_DOMAINS = ['profile','usage','creation','billing','lifecycle','service','risk','health'];
+const CERTAIN_LAYERS = { fact:'权威事实（只读）', metric:'可复算统计', rule:'规则推导', model:'模型预测（带置信度）', manual:'人工标注（需有效期）' };
+
+/* 最新推荐架构约束：付费 / 风险 / 健康属性不得参与音乐排序 */
+const MUSIC_RANK_FORBIDDEN = ['billing','risk','health'];
+/* 关闭个性化后不可投影的个人兴趣与序列 */
+const PERSONAL_TAGS = ['user.creation.style_pref','user.creation.duration_pref','user.creation.vocal_pref','user.listening.genre_affinity','user.usage.model_version_pref'];
+
+const PURPOSES = [
+  { id:'ops_touch', name:'运营触达', desc:'站内信、Push、活动名单', domains:['profile','usage','creation','billing','lifecycle','service'], subjects:['user','tenant','member'], status:'active', owner:'增长-林岚', validUntil:'2027-03-31', rule:'不得用于差异化定价；风险域需单独审批' },
+  { id:'creation_assist', name:'创作辅助', desc:'生成参数预填、模板与风格推荐', domains:['creation','usage'], subjects:['user'], status:'active', owner:'创作产品', validUntil:'2027-01-31', rule:'只做默认值预填，不改变积分与权限' },
+  { id:'music_rank', name:'音乐推荐排序', desc:'首页与创作页个性化排序', domains:['creation','usage'], subjects:['user'], status:'active', owner:'推荐算法', validUntil:'2026-12-31', rule:'付费、风险、健康属性禁止参与排序；创作偏好不等同听歌兴趣' },
+  { id:'customer_success', name:'客户成功', desc:'租户健康度、续费与席位运营', domains:['health','usage','service'], subjects:['tenant','member'], status:'active', owner:'客户成功', validUntil:'2027-06-30', rule:'仅用于 B 端跟进，不回流 C 端推荐' },
+  { id:'risk_control', name:'风控合规', desc:'安全审核、反作弊与合规调查', domains:['risk'], subjects:['user','member'], status:'active', owner:'安全组', validUntil:'2027-06-30', rule:'仅用于安全与合规，不得用于营销或排序' },
+  { id:'analytics', name:'聚合分析', desc:'经营看板与人群规模分析', domains:['profile','usage','creation','billing','lifecycle','service','risk','health'], subjects:['user','tenant','member'], status:'active', owner:'数据研发', validUntil:'2027-06-30', rule:'仅输出聚合结果，禁止个人级明细外发' }
+];
+
+/* =========================================================
+   Mock 数据（与架构文档的标签分层/编码/状态一致）
+   ========================================================= */
+let tags = [
+  {code:'user.profile.registered_channel',name:'注册渠道',subject:'user',layer:'fact',domain:'profile',values:'iOS / Android / 微信 / PC',hits:498200,coverage:'99.6%',freq:'实时',status:'active',owner:'增长',sensitive:false,version:'v1',authoritative:true,source:'identity.users',definition:'注册事件中的渠道参数直接映射，不做任何推断，可对账。',lastUpdated:'11-19 00:02',validUntil:''},
+  {code:'user.profile.country_region',name:'国家/地区',subject:'user',layer:'fact',domain:'profile',values:'CN / JP / SG / US / DE',hits:497100,coverage:'99.4%',freq:'实时',status:'active',owner:'增长',sensitive:false,version:'v1',authoritative:true,source:'identity.users',definition:'注册地与应用商店地区，用于内容合规与本地化，不用于差异化定价。',lastUpdated:'11-19 00:02',validUntil:''},
+  {code:'user.usage.gen_count_30d',name:'30 日生成次数',subject:'user',layer:'metric',domain:'usage',values:'数值（0–999）',hits:431000,coverage:'86.2%',freq:'小时',status:'active',owner:'数据研发',sensitive:false,version:'v1',source:'events.generation_completed',definition:'统计 30 日内成功完成的生成任务数，按 user_id 归属，失败与取消不计入。',lastUpdated:'11-19 05:00',validUntil:''},
+  {code:'user.usage.active_days_30d',name:'30 日活跃天数',subject:'user',layer:'metric',domain:'usage',values:'数值（0–30）',hits:452600,coverage:'90.5%',freq:'T+1',status:'active',owner:'数据研发',sensitive:false,version:'v2',source:'events.generation_completed',definition:'按自然日去重计数，登录与生成任一发生即计为活跃日。',lastUpdated:'11-19 04:10',validUntil:''},
+  {code:'user.usage.model_version_pref',name:'音乐大模型版本偏好',subject:'user',layer:'metric',domain:'usage',values:'v2.8 / v3.2 / v3.5',hits:288400,coverage:'57.7%',freq:'T+1',status:'active',owner:'模型产品',sensitive:false,version:'v1',source:'events.generation_completed',definition:'近 30 日生成任务中占比最高的模型版本，低于 5 次生成不产出。',lastUpdated:'11-19 04:10',validUntil:''},
+  {code:'user.creation.style_pref',name:'创作风格偏好',subject:'user',layer:'rule',domain:'creation',values:'国风 / 电子 / 流行 / 影视配乐',hits:286400,coverage:'57.3%',freq:'T+1',status:'active',owner:'增长',sensitive:false,version:'v2',source:'events.work_published',definition:'由近 90 日完成作品的风格分布推导，置信度低于 0.6 时输出“未形成”。注意：创作偏好不等同听歌兴趣。',lastUpdated:'11-19 06:00',validUntil:''},
+  {code:'user.creation.duration_pref',name:'时长偏好',subject:'user',layer:'rule',domain:'creation',values:'30s / 60–90s / 120–180s / >180s',hits:231700,coverage:'46.4%',freq:'T+1',status:'active',owner:'增长',sensitive:false,version:'v1',source:'events.work_published',definition:'按近 60 日完成作品的时长中位数分桶。',lastUpdated:'11-19 06:00',validUntil:''},
+  {code:'user.creation.vocal_pref',name:'人声偏好',subject:'user',layer:'rule',domain:'creation',values:'器乐 / 人声 / 混合',hits:208300,coverage:'41.7%',freq:'T+1',status:'active',owner:'增长',sensitive:false,version:'v1',source:'events.work_published',definition:'由作品人声参数与用户手动选择共同判定。',lastUpdated:'11-19 06:00',validUntil:''},
+  {code:'user.creation.creator_tier',name:'创作者分层',subject:'user',layer:'rule',domain:'creation',values:'普通 / 潜力 / 优质 / 头部',hits:12800,coverage:'2.6%',freq:'T+1',status:'active',owner:'内容运营',sensitive:false,version:'v2',source:'events.work_published',definition:'综合完成作品数、收藏率与完播率分层；v3 拟将潜力门槛由 5 个作品调整为 8 个，待审批。',lastUpdated:'11-19 06:00',validUntil:''},
+  {code:'user.creation.onboarding_completed',name:'新手引导完成',subject:'user',layer:'rule',domain:'creation',values:'true / false',hits:203000,coverage:'40.6%',freq:'小时',status:'draft',owner:'增长',sensitive:false,version:'v1',source:'events.generation_completed',definition:'完成引导中的首个模板生成即置为 true；当前为草稿，尚未发布，不可用于正式圈选。',lastUpdated:'11-18 15:20',validUntil:''},
+  {code:'user.billing.credit_exhaust_risk',name:'额度耗尽风险',subject:'user',layer:'model',domain:'billing',values:'high / medium / low',hits:93400,coverage:'18.7%',freq:'T+1',status:'active',owner:'周庭',sensitive:true,version:'v1',source:'model_feature_store',definition:'预测 7 日内可用积分耗尽的概率，模型输出带置信度。仅用于展示策略，不得用于差异化定价。',lastUpdated:'11-19 06:00',validUntil:''},
+  {code:'user.billing.paid_before',name:'历史付费',subject:'user',layer:'fact',domain:'billing',values:'true / false',hits:76500,coverage:'15.3%',freq:'实时',status:'active',owner:'增长',sensitive:false,version:'v1',authoritative:true,source:'orders.credit_accounts',definition:'以支付订单成功记录为准，权威事实，只读。',lastUpdated:'11-19 05:52',validUntil:''},
+  {code:'user.billing.arpu_band',name:'ARPU 区间',subject:'user',layer:'metric',domain:'billing',values:'<¥10 / ¥10–50 / ¥50–100 / >¥100',hits:76500,coverage:'15.3%',freq:'T+1',status:'active',owner:'数据研发',sensitive:true,version:'v1',source:'orders.credit_accounts',definition:'近 12 个月实付金额分桶，仅用于经营分析。',lastUpdated:'11-19 06:00',validUntil:''},
+  {code:'user.lifecycle.stage',name:'用户生命周期阶段',subject:'user',layer:'rule',domain:'lifecycle',values:'new / active / active_creator / dormant',hits:412300,coverage:'82.4%',freq:'T+1',status:'active',owner:'林岚',sensitive:false,version:'v3',source:'events.generation_completed',definition:'综合注册时长、活跃天数与作品数判定；沉默 30 天进入 dormant。',lastUpdated:'11-19 06:00',validUntil:''},
+  {code:'user.lifecycle.dormant_days',name:'连续未活跃天数',subject:'user',layer:'metric',domain:'lifecycle',values:'数值（0–999）',hits:452600,coverage:'90.5%',freq:'T+1',status:'active',owner:'增长',sensitive:false,version:'v1',source:'events.generation_completed',definition:'距最近一次登录或生成的自然日数。',lastUpdated:'11-19 04:10',validUntil:''},
+  {code:'user.service.vip_flag',name:'VIP 人工标记',subject:'user',layer:'manual',domain:'service',values:'true',hits:312,coverage:'0.06%',freq:'实时',status:'active',owner:'客服中心',sensitive:false,version:'v1',source:'人工标注',definition:'客服补偿与重点客户人工标注，必须填写有效期与用途，到期自动失效。',lastUpdated:'11-16 15:20',validUntil:'2026-12-31'},
+  {code:'user.service.recall_sensitivity',name:'召回敏感度',subject:'user',layer:'rule',domain:'service',values:'高 / 中 / 低',hits:152000,coverage:'30.4%',freq:'T+1',status:'active',owner:'增长',sensitive:false,version:'v2',source:'events.generation_completed',definition:'基于历史触达退订与响应推导；口径有效期至 2026-10-31，已过期，不得用于正式触达。',lastUpdated:'2026-10-30 06:00',validUntil:'2026-10-31'},
+  {code:'user.risk.multi_account_flag',name:'疑似多账号',subject:'user',layer:'rule',domain:'risk',values:'true / false',hits:2140,coverage:'0.43%',freq:'小时',status:'active',owner:'安全组',sensitive:true,version:'v4',source:'events.generation_completed',definition:'设备与登录行为聚类结果，仅用于风控复核，不得用于营销排序。',lastUpdated:'11-19 05:00',validUntil:''},
+  {code:'user.risk.content_violation_flag',name:'内容违规标记',subject:'user',layer:'rule',domain:'risk',values:'true / false',hits:1840,coverage:'0.37%',freq:'小时',status:'active',owner:'安全组',sensitive:true,version:'v3',source:'人工标注',definition:'审核命中记录，权威处置结果只读。',lastUpdated:'11-19 03:12',validUntil:''},
+  {code:'user.listening.genre_affinity',name:'听歌流派亲和度',subject:'user',layer:'rule',domain:'listening',values:'国风 / 电子 / 流行 / 古典',hits:0,coverage:'0%',freq:'T+1',status:'pending',owner:'推荐算法',sensitive:false,version:'v1',source:'events.playback_started',definition:'基于有效播放构造的听歌兴趣；听歌域尚未完成数据源登记审批，标签不可正式使用。',lastUpdated:'—',validUntil:''},
+  {code:'tenant.billing.plan_type',name:'租户套餐类型',subject:'tenant',layer:'fact',domain:'billing',values:'个人版 / 团队版 / 企业版',hits:780,coverage:'100%',freq:'实时',status:'active',owner:'商业化',sensitive:false,version:'v1',authoritative:true,source:'tenants',definition:'订阅合同直接映射，权威事实，只读。',lastUpdated:'11-19 05:52',validUntil:''},
+  {code:'tenant.billing.commercial_license',name:'商用授权状态',subject:'tenant',layer:'fact',domain:'billing',values:'已授权 / 试用 / 未授权',hits:780,coverage:'100%',freq:'实时',status:'active',owner:'法务',sensitive:false,version:'v1',authoritative:true,source:'tenants',definition:'商用授权合同状态，用于下载与导出权限提示；标签不得替代权限判定。',lastUpdated:'11-19 05:52',validUntil:''},
+  {code:'tenant.usage.gen_trend_30d',name:'租户用量趋势',subject:'tenant',layer:'metric',domain:'usage',values:'上升 / 持平 / 下降',hits:642,coverage:'82.3%',freq:'T+1',status:'active',owner:'客户成功',sensitive:false,version:'v1',source:'events.generation_completed',definition:'近 30 日生成量与上一周期比较，变化超过 15% 判定为上升或下降。',lastUpdated:'11-19 04:10',validUntil:''},
+  {code:'tenant.usage.seat_activation_rate',name:'席位激活率',subject:'tenant',layer:'metric',domain:'usage',values:'0–100%',hits:642,coverage:'82.3%',freq:'T+1',status:'active',owner:'客户成功',sensitive:false,version:'v1',source:'memberships',definition:'近 30 日有登录或生成的席位占已购席位比例。',lastUpdated:'11-19 04:10',validUntil:''},
+  {code:'tenant.health.churn_risk',name:'租户流失风险',subject:'tenant',layer:'model',domain:'health',values:'high / medium / low',hits:86,coverage:'11.0%',freq:'周',status:'active',owner:'客户成功',sensitive:true,version:'v1',source:'model_feature_store',definition:'续费前流失概率预测，仅用于客户成功跟进；不得参与音乐排序或 C 端触达。',lastUpdated:'11-16 06:00',validUntil:''},
+  {code:'tenant.service.key_account',name:'重点客户',subject:'tenant',layer:'manual',domain:'service',values:'true',hits:47,coverage:'6.0%',freq:'实时',status:'active',owner:'客户成功',sensitive:false,version:'v1',source:'人工标注',definition:'客户成功手工标注，必须设定有效期。',lastUpdated:'11-15 10:00',validUntil:'2026-12-20'},
+  {code:'member.usage.weekly_active_days',name:'成员周活跃天数',subject:'member',layer:'metric',domain:'usage',values:'数值（0–7）',hits:6400,coverage:'91.4%',freq:'T+1',status:'active',owner:'客户成功',sensitive:false,version:'v1',source:'memberships',tenant:'t_208',definition:'按 tenant_id + member_id 归属统计，跨租户不合并。',lastUpdated:'11-19 04:10',validUntil:''},
+  {code:'member.service.key_decision_maker',name:'关键决策人',subject:'member',layer:'manual',domain:'service',values:'true',hits:47,coverage:'6.1%',freq:'实时',status:'active',owner:'客户成功',sensitive:true,version:'v1',source:'人工标注',tenant:'t_208',definition:'客户成功标注的采购决策人，必须绑定租户并设置有效期。',lastUpdated:'11-14 17:20',validUntil:'2026-12-15'},
+  {code:'member.risk.share_device_flag',name:'共享设备标记',subject:'member',layer:'rule',domain:'risk',values:'true / false',hits:96,coverage:'1.5%',freq:'小时',status:'active',owner:'安全组',sensitive:true,version:'v2',source:'memberships',tenant:'t_208',definition:'同设备多账号登录标记，仅用于企业租户安全复核。',lastUpdated:'11-19 05:00',validUntil:''}
+];
+
+let sources = [
+  {id:'identity.users',name:'用户主数据',system:'SonicHub_api · PostgreSQL',table:'users',subject:'user',domain:'profile',fields:'id, channel, country, created_at',quality:'99.8%',status:'registered',owner:'平台组',latency:'实时',license:'可用于画像与运营，不得对外明文导出',note:'注册渠道与国家/地区的权威来源。',lastCheck:'11-19 05:40'},
+  {id:'orders.credit_accounts',name:'积分与订单',system:'SonicHub_api · PostgreSQL',table:'credit_accounts / credit_orders',subject:'user',domain:'billing',fields:'user_id, balance, frozen, paid_amount',quality:'99.9%',status:'registered',owner:'商业化',latency:'实时',license:'余额与支付事实只读，禁止标签缓存余额',note:'积分余额以该表为准，标签只做区间判断。',lastCheck:'11-19 05:40'},
+  {id:'events.generation_completed',name:'生成完成事件',system:'SonicHub_api · 事件流',table:'generation.completed',subject:'user',domain:'usage',fields:'user_id, tenant_id, model_version, duration',quality:'99.2%',status:'registered',owner:'数据研发',latency:'约 3 秒',license:'按 user_id 归属，创作行为不得混入听歌兴趣',note:'有效播放与生成完成判定规则不同，禁止混用。',lastCheck:'11-19 05:35'},
+  {id:'events.work_published',name:'作品发布事件',system:'SonicHub_api · 事件流',table:'work.published',subject:'user',domain:'creation',fields:'user_id, style, duration, vocal, multitrack',quality:'98.7%',status:'registered',owner:'内容运营',latency:'约 5 秒',license:'可用于创作辅助与聚合分析',note:'创作偏好与听歌兴趣必须分开建模。',lastCheck:'11-19 05:35'},
+  {id:'events.playback_started',name:'播放开始事件',system:'SonicHub_api · 事件流',table:'playback.started',subject:'user',domain:'listening',fields:'user_id, track_id, play_seconds, completed',quality:'96.2%',status:'pending',owner:'推荐算法',latency:'待核验',license:'听歌域需完成域登记与合规审批后方可使用',note:'曝光不等于有效播放；Outbox 采集链路尚未核验完成，暂不可用。',lastCheck:'11-18 22:10'},
+  {id:'memberships',name:'租户成员关系',system:'SonicHub_api · PostgreSQL',table:'memberships',subject:'member',domain:'usage',fields:'tenant_id, member_id, role, last_active_at',quality:'99.5%',status:'registered',owner:'平台组',latency:'T+1',license:'成员数据必须带 tenant_id，禁止跨租户合并',note:'成员标签的唯一合法归属来源。',lastCheck:'11-19 05:40'},
+  {id:'tenants',name:'租户主数据',system:'SonicHub_api · PostgreSQL',table:'tenants',subject:'tenant',domain:'billing',fields:'tenant_id, plan_type, license_status, seats',quality:'99.9%',status:'registered',owner:'商业化',latency:'实时',license:'套餐与授权为权威事实，只读',note:'不得用标签替代商用授权判定。',lastCheck:'11-19 05:40'},
+  {id:'model_feature_store',name:'模型特征库',system:'特征平台 · 离线',table:'feature_snapshots',subject:'user',domain:'billing',fields:'user_id, churn_score, exhaust_prob',quality:'97.4%',status:'registered',owner:'算法组',latency:'T+1 / 周',license:'仅用于对应用途，需带置信度与版本',note:'模型分数不得回写为权威事实。',lastCheck:'11-19 06:10'}
+];
+
+const scenarios = [
+  {id:'S1',name:'新用户冷启动引导',seg:'新用户未首作',code:'seg_new_no_work',size:32480,subject:'user',metric:'7 日首作率 +6.2%',conds:[{code:'user.lifecycle.stage',op:'=',value:'new'},{code:'user.usage.gen_count_30d',op:'≤',value:'1'}]},
+  {id:'S2',name:'创作偏好参数预填',seg:'偏好明确创作者',code:'seg_style_clear',size:186400,subject:'user',metric:'二次生成率 +9.4%',conds:[{code:'user.creation.style_pref',op:'≠',value:'未形成'},{code:'user.usage.gen_count_30d',op:'≥',value:'3'}]},
+  {id:'S3',name:'额度耗尽前转化',seg:'额度将尽高频用户',code:'seg_credit_low',size:18260,subject:'user',metric:'充值转化 +3.1pt',conds:[{code:'user.billing.credit_exhaust_risk',op:'=',value:'high'},{code:'user.billing.paid_before',op:'=',value:'true'}]},
+  {id:'S4',name:'沉默创作者召回',seg:'30 日沉默有作品',code:'seg_dormant',size:76900,subject:'user',metric:'召回率 12.7%',conds:[{code:'user.lifecycle.dormant_days',op:'≥',value:'30'},{code:'user.creation.creator_tier',op:'=',value:'潜力'}]},
+  {id:'S5',name:'潜力创作者激励',seg:'潜力创作者',code:'seg_creator_potential',size:4120,subject:'user',metric:'优质产出 +18%',conds:[{code:'user.creation.creator_tier',op:'=',value:'潜力'},{code:'user.creation.style_pref',op:'=',value:'国风'}]},
+  {id:'S6',name:'企业租户续费跟进',seg:'高风险租户',code:'seg_tenant_risk',size:38,subject:'tenant',metric:'回访覆盖 100%',conds:[{code:'tenant.health.churn_risk',op:'=',value:'high'}]},
+  {id:'S7',name:'听歌兴趣冷启（待审批）',seg:'听歌流派人群',code:'seg_listening_cold',size:0,subject:'user',metric:'未启用',conds:[{code:'user.listening.genre_affinity',op:'in',value:'国风, 电子'}]}
+];
+
+let jobs = [
+  {id:'job_261119_041',tag:'user.creation.style_pref',ver:'v2',mode:'full',window:'11-18 → 11-19',status:'running',progress:62,shards:'16 分片 · 10 完成',duration:'14m 08s',err:''},
+  {id:'job_261119_039',tag:'user.lifecycle.stage',ver:'v3',mode:'full',window:'11-18 → 11-19',status:'running',progress:38,shards:'16 分片 · 6 完成',duration:'9m 22s',err:''},
+  {id:'job_261119_036',tag:'user.usage.gen_count_30d',ver:'v1',mode:'incremental',window:'11-19 03:00 → 04:00',status:'succeeded',progress:100,shards:'4 分片 · 4 完成',duration:'2m 41s',err:''},
+  {id:'job_261119_034',tag:'user.billing.credit_exhaust_risk',ver:'v1',mode:'full',window:'2026-11-19',status:'succeeded',progress:100,shards:'8 分片 · 8 完成',duration:'6m 03s',err:''},
+  {id:'job_261119_031',tag:'tenant.health.churn_risk',ver:'v1',mode:'full',window:'2026-W46',status:'failed',progress:100,shards:'2 / 2 分片失败',duration:'00m 48s',err:'数据源 memberships 超时（>30s），已重试 3 次'},
+  {id:'job_261119_028',tag:'user.risk.multi_account_flag',ver:'v4',mode:'incremental',window:'11-19 04:00 → 05:00',status:'queued',progress:0,shards:'待调度',duration:'—',err:''}
+];
+
+let approvals = [
+  {id:'ap_9014',type:'删除申请',refType:'deletion',refId:'dr_2202',refCode:'u_2087',target:'陈默 · u_2087 · 用户主动注销',applicant:'林岚',risk:'高',reason:'用户行使删除权；范围：标签结果、派生画像缓存、模型特征、推荐序列特征',time:'11-18 21:45'},
+  {id:'ap_9012',type:'新标签发布',refType:'tag_publish',refCode:'user.creation.onboarding_completed',target:'user.creation.onboarding_completed v1',applicant:'林岚',risk:'中',reason:'新手引导闭环需要，预计覆盖 20 万新用户',time:'11-19 09:24'},
+  {id:'ap_9011',type:'口径变更',refType:'tag_change',refCode:'user.creation.creator_tier',target:'user.creation.creator_tier v3',applicant:'内容运营',risk:'中',reason:'激励池门槛从 5 个作品调整为 8 个',time:'11-19 08:51'},
+  {id:'ap_9010',type:'敏感标签导出',refType:'export',refCode:'seg_credit_low',target:'seg_credit_low · 15,000 条',applicant:'周庭',risk:'高',reason:'Q4 付费转化专项，仅用于站内信触达',time:'11-18 18:40'},
+  {id:'ap_9009',type:'人工标签导入',refType:'manual_import',refCode:'user.service.vip_flag',target:'user.service.vip_flag · 312 条',applicant:'客服中心',risk:'低',reason:'客服补偿名单，有效期至 2026-12-31',time:'11-18 15:12'},
+  {id:'ap_9008',type:'域登记',refType:'source_register',refCode:'events.playback_started',target:'events.playback_started · listening 域',applicant:'推荐算法-许澄',risk:'高',reason:'听歌兴趣冷启动需要，需确认有效播放口径与采集合规',time:'11-18 11:05'},
+  {id:'ap_9007',type:'用途扩围',refType:'usage_grant',refCode:'music_rank',target:'音乐推荐排序 · 申请加入 listening 域',applicant:'推荐算法-许澄',risk:'高',reason:'仅在听歌域登记通过后生效，需评估隐私影响',time:'11-18 10:42'}
+];
+
+let approvalHistory = [
+  {id:'ap_9006',type:'新标签发布',target:'user.creation.duration_pref v1',result:'通过',actor:'数据合规-周明',time:'11-17 16:20',note:'口径清晰，抽样偏差 1.8%'},
+  {id:'ap_9005',type:'敏感标签导出',target:'user.risk.multi_account_flag · 2,140 条',result:'驳回',actor:'数据合规-周明',time:'11-17 14:05',note:'导出用途描述不足，且未附复核工单'},
+  {id:'ap_9004',type:'口径变更',target:'user.lifecycle.stage v3',result:'通过',actor:'业务负责人-许澄',time:'11-15 17:31',note:'新增 active_creator 分支，回滚方案已确认'}
+];
+
+let audits = [
+  {id:'au_5528',actor:'周庭',action:'导出人群包',target:'seg_credit_low · snap_1174',tag:'user.billing.credit_exhaust_risk',rows:15000,purpose:'Q4 付费转化专项',ip:'10.24.8.31',time:'2026-11-19 10:02',meta:'字段：内部 ID；手机号已脱敏；审批单 ap_9010'},
+  {id:'au_5527',actor:'林岚',action:'查看敏感标签',target:'用户 苏野 / u_1024',tag:'user.risk.multi_account_flag',rows:1,purpose:'客诉核查',ip:'10.24.6.12',time:'2026-11-19 09:47',meta:'单次授权 30 分钟；仅展示布尔结果'},
+  {id:'au_5526',actor:'客服中心-王琳',action:'导入人工标签',target:'tag_import_batch_2211',tag:'user.service.vip_flag',rows:312,purpose:'客服补偿',ip:'10.24.9.88',time:'2026-11-18 15:20',meta:'有效期 2026-12-31；导入前后差异 0'},
+  {id:'au_5525',actor:'客户成功-赵启',action:'查看客户 360',target:'租户 SonicLab Studio / t_208',tag:'tenant.health.churn_risk',rows:1,purpose:'续费回访',ip:'10.24.7.44',time:'2026-11-18 14:05',meta:'仅查看高风险原因，未导出'},
+  {id:'au_5524',actor:'林岚',action:'修改标签口径',target:'user.lifecycle.stage v2 → v3',tag:'user.lifecycle.stage',rows:'—',purpose:'新增 active_creator 分支',ip:'10.24.6.12',time:'2026-11-17 17:31',meta:'变更前后抽样差异 +2.1%；已审批 ap_9004'},
+  {id:'au_5523',actor:'安全组-陈默',action:'全量重算',target:'job_261118_018',tag:'user.risk.content_violation_flag',rows:1840,purpose:'审核数据回补',ip:'10.24.11.7',time:'2026-11-18 02:14',meta:'幂等键 user.risk.content_violation_flag|v3|2026-11-18'},
+  {id:'au_5522',actor:'推荐算法-许澄',action:'申请域登记',target:'events.playback_started',tag:'user.listening.genre_affinity',rows:'—',purpose:'听歌兴趣冷启动',ip:'10.24.12.5',time:'2026-11-18 11:05',meta:'审批单 ap_9008；未通过前标签不可用'},
+  {id:'au_5521',actor:'林岚',action:'关闭个性化',target:'用户 陈默 / u_2087',tag:'user.creation.style_pref',rows:1,purpose:'用户设置同步',ip:'10.24.6.12',time:'2026-11-16 09:12',meta:'停止个人兴趣与序列投影；不删除历史标签值'}
+];
+
+let authz = [
+  {id:'az_301',purpose:'ops_touch',scope:'profile / usage / creation / billing / lifecycle / service',status:'active',owner:'增长-林岚',validUntil:'2027-03-31',note:'风险域与健康域不在本授权内'},
+  {id:'az_302',purpose:'creation_assist',scope:'creation / usage',status:'active',owner:'创作产品',validUntil:'2027-01-31',note:'仅用于默认值预填'},
+  {id:'az_303',purpose:'music_rank',scope:'creation / usage',status:'active',owner:'推荐算法',validUntil:'2026-12-31',note:'不含 listening 域，付费/风险/健康禁止参与'},
+  {id:'az_304',purpose:'customer_success',scope:'health / usage / service',status:'active',owner:'客户成功',validUntil:'2027-06-30',note:'仅 B 端使用，不回流 C 端'},
+  {id:'az_305',purpose:'risk_control',scope:'risk',status:'active',owner:'安全组',validUntil:'2027-06-30',note:'仅安全与合规'},
+  {id:'az_306',purpose:'analytics',scope:'全部域（仅聚合）',status:'active',owner:'数据研发',validUntil:'2027-06-30',note:'禁止个人级明细'}
+];
+
+let deletionRequests = [
+  {id:'dr_2201',subjectId:'u_3311',subjectName:'何雨',scope:['标签结果','派生画像缓存','人群快照引用','模型特征'],status:'completed',submitted:'11-12 10:20',completed:'11-12 10:26',result:{tags:16,profile:4,snapshots:1,features:3},approvedBy:'数据合规-周明'},
+  {id:'dr_2202',subjectId:'u_2087',subjectName:'陈默',scope:['标签结果','派生画像缓存','模型特征','推荐序列特征'],status:'pending',submitted:'11-18 21:40',completed:'',result:null,approvedBy:''}
+];
+
+const customers = {
+  u_1024:{subject:'user',name:'苏野',id:'u_1024',meta:'个人租户 t_102 · iOS · 2025-03-18 注册',
+    badges:[['b-active','正常用户'],['b-manual','潜力创作者'],['b-sens','含敏感标签']],
+    vals:{'user.profile.registered_channel':'iOS','user.profile.country_region':'CN · 上海','user.usage.gen_count_30d':'28 次','user.usage.active_days_30d':'17 天','user.usage.model_version_pref':'v3.2 · 72%','user.creation.style_pref':'国风 · 影视配乐','user.creation.duration_pref':'120–180s','user.creation.vocal_pref':'器乐为主','user.creation.creator_tier':'潜力创作者','user.billing.paid_before':'true','user.billing.credit_exhaust_risk':'high · 0.83','user.billing.arpu_band':'¥50–100','user.lifecycle.stage':'active_creator','user.lifecycle.dormant_days':'2','user.service.vip_flag':'true','user.risk.multi_account_flag':'false','user.risk.content_violation_flag':'false'},
+    facts:[['可用积分','1,280','credit_accounts 只读'],['冻结积分','32','credit_requests 只读'],['作品数','14','works'],['近 30 日生成','28 次','generations'],['商用授权','团队版 · 已授权','tenants 只读']],
+    events:[['11-19 09:41','完成生成「长安夜雨」','国风 · 180s · 分轨'],['11-18 22:10','充值 3,600 积分','首充礼包'],['11-17 20:33','收藏作品「归途」','—'],['11-15 11:02','连续签到 7 天','+70 积分'],['11-12 19:24','切换模型 v3.2','多轨导出']]},
+  u_2087:{subject:'user',name:'陈默',id:'u_2087',meta:'个人租户 t_447 · Android · 2026-09-02 注册',
+    badges:[['b-active','正常用户'],['b-expired','沉默 34 天'],['b-pending','删除申请待审']],
+    vals:{'user.profile.registered_channel':'Android','user.profile.country_region':'CN · 成都','user.usage.gen_count_30d':'0 次','user.usage.active_days_30d':'0 天','user.creation.style_pref':'未形成（置信度 0.31）','user.billing.paid_before':'false','user.billing.credit_exhaust_risk':'low · 0.12','user.lifecycle.stage':'dormant','user.lifecycle.dormant_days':'34 天','user.service.recall_sensitivity':'高（已过期）','user.risk.multi_account_flag':'false'},
+    facts:[['可用积分','180','credit_accounts 只读'],['冻结积分','0','credit_requests 只读'],['作品数','1','works'],['近 30 日生成','0 次','generations']],
+    events:[['11-18 21:40','提交删除申请','dr_2202 待审批'],['11-16 10:00','进入召回人群包','seg_dormant'],['10-14 21:12','最后一次生成失败','模型超时，已释放积分']]},
+  u_3311:{subject:'user',name:'何雨',id:'u_3311',meta:'个人租户 t_512 · 2026-01-09 注册 · 已注销',removed:true,
+    badges:[['b-archived','派生数据已删除']],vals:{},facts:[['注销状态','已注销','users 只读'],['订单对账保留','2 笔','orders 只读']],events:[['11-12 10:26','派生数据删除完成','dr_2201']]},
+  t_208:{subject:'tenant',name:'SonicLab Studio',id:'t_208',meta:'企业租户 · 12 席位 · 2025-11-04 开通',
+    badges:[['b-active','正常'],['b-high','流失风险 high'],['b-sens','含敏感标签']],
+    vals:{'tenant.billing.plan_type':'企业版 · 年付','tenant.billing.commercial_license':'已授权','tenant.usage.gen_trend_30d':'下降 −42%','tenant.usage.seat_activation_rate':'58%','tenant.health.churn_risk':'high · 0.71','tenant.service.key_account':'true'},
+    facts:[['可用积分','48,200','credit_accounts 只读'],['冻结积分','600','credit_requests 只读'],['作品数','216','works'],['近 30 日生成','340 次（−42%）','generations'],['席位','12 / 已激活 7','memberships 只读']],
+    events:[['11-19 09:10','健康度跌入高风险','churn_risk 0.71'],['11-14 16:22','2 个席位连续 30 天未登录','seat_activation'],['11-02 10:05','续费窗口开启','剩余 45 天']]},
+  m_4410:{subject:'member',name:'顾清',id:'m_4410',tenant:'t_208',meta:'成员 · 租户 SonicLab Studio (t_208) · 采购负责人',
+    badges:[['b-active','正常'],['b-manual','关键决策人'],['b-sens','含敏感标签']],
+    vals:{'member.usage.weekly_active_days':'5 天','member.service.key_decision_maker':'true','member.risk.share_device_flag':'false','tenant.usage.seat_activation_rate':'58%'},
+    facts:[['所属租户','t_208 · SonicLab Studio','memberships 只读'],['席位状态','已激活','memberships 只读'],['最近登录','11-19 08:20','memberships 只读']],
+    events:[['11-19 08:20','登录企业工作台','—'],['11-17 15:02','导出商用授权证明','license.pdf'],['11-14 16:22','连续 30 天未登录（已恢复）','seat_activation']]}
+};
+
+let snapshots = [
+  {id:'snap_1181',name:'新用户未首作',subject:'user',size:32480,time:'11-18 06:00',expire:'11-25',expr:'AND(user.lifecycle.stage = new, user.usage.gen_count_30d ≤ 1)',conds:[{code:'user.lifecycle.stage',op:'=',value:'new'},{code:'user.usage.gen_count_30d',op:'≤',value:'1'}],tagVersions:{'user.lifecycle.stage':'v3','user.usage.gen_count_30d':'v1'}},
+  {id:'snap_1174',name:'30 日沉默有作品',subject:'user',size:76900,time:'11-17 06:00',expire:'11-24',expr:'AND(user.lifecycle.dormant_days ≥ 30, user.creation.creator_tier = 潜力)',conds:[{code:'user.lifecycle.dormant_days',op:'≥',value:'30'},{code:'user.creation.creator_tier',op:'=',value:'潜力'}],tagVersions:{'user.lifecycle.dormant_days':'v1','user.creation.creator_tier':'v2'}},
+  {id:'snap_1160',name:'高风险租户',subject:'tenant',size:38,time:'11-16 06:00',expire:'11-23',expr:'AND(tenant.health.churn_risk = high)',conds:[{code:'tenant.health.churn_risk',op:'=',value:'high'}],tagVersions:{'tenant.health.churn_risk':'v1'}}
+];
+
+/* =========================================================
+   基础工具
+   ========================================================= */
+const fmt = n => Number(n).toLocaleString('en-US');
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $ = sel => document.querySelector(sel);
+const tagByCode = code => tags.find(t => t.code === code);
+const srcById = id => sources.find(s => s.id === id);
+const isExpired = t => !!(t.validUntil && t.validUntil < TODAY);
+const isStale = code => jobs.some(j => j.tag === code && j.status === 'failed');
+const tagState = t => isExpired(t) ? 'expired' : t.status;
+
+function bumpVersion(v){
+  const n = parseInt(String(v).replace('v',''), 10);
+  return 'v' + (isNaN(n) ? 2 : n + 1);
+}
+function nowLabel(){
+  const d = new Date();
+  const p = n => String(n).padStart(2,'0');
+  return `${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function defaultConds(subject){
+  return {
+    user:[{code:'user.usage.gen_count_30d',op:'≥',value:'3'},{code:'user.creation.style_pref',op:'≠',value:'未形成'}],
+    tenant:[{code:'tenant.health.churn_risk',op:'=',value:'high'}],
+    member:[{code:'member.usage.weekly_active_days',op:'≤',value:'2'}]
+  }[subject] || [];
+}
+function firstCustomerOf(subject){
+  return Object.keys(customers).find(k => customers[k].subject === subject) || '';
+}
+
+/* =========================================================
+   状态
+   ========================================================= */
+const state = {
+  view:'overview', subject:'user',
+  q:'', layer:'all', status:'all',
+  tagTab:'overview', activeTag:'user.lifecycle.stage',
+  customer:'u_1024',
+  seg:{ logic:'AND', conds:defaultConds('user'), stale:false, estimate:null, estimating:false, tenant:'t_208', scenario:null },
+  snapshots,
+  dryRun:{ status:'idle', progress:0 },
+  usage:{ purpose:'music_rank', filter:'all' },
+  personalization:true,
+  privacy:{ scope:['标签结果','派生画像缓存','人群快照引用','模型特征'], jobId:null },
+  apTab:'pending',
+  audit:{ q:'', action:'all' },
+  drawer:'', modal:'', modalData:{}, focus:null,
+  seeded:false
+};
+
+/* =========================================================
+   Mock API（本地异步，不连接后端）
+   ========================================================= */
+const api = {
+  delay(ms){ return new Promise(r => setTimeout(r, ms == null ? 420 : ms)); },
+  async createTag(payload){ await this.delay(380); return {...payload, status:'draft', version:'v1', hits:0, coverage:'0%', lastUpdated:'—'}; },
+  async dryRun(code){ await this.delay(300); const t = tagByCode(code); const seed = code.length * 137; return { hits: Math.round((t.hits || 12000) * 1.016), coverage: t.coverage === '0%' ? '39.8%' : (parseFloat(t.coverage) + 1.3).toFixed(1) + '%', nullRate:'1.2%', samples: sampleFor(t) }; },
+  async estimate(){ await this.delay(520); return computeEstimate(); },
+  async mutation(){ await this.delay(300); return true; }
+};
+
+function sampleFor(t){
+  const rows = Object.keys(customers).filter(k => customers[k].subject === t.subject && !customers[k].removed).slice(0,3);
+  return rows.map(k => `${customers[k].id.padEnd(8)} ${customers[k].name.padEnd(4)} → ${t.values.split(' / ')[0]}`);
+}
+
+function computeEstimate(){
+  const base = { user:498200, tenant:780, member:6400 }[state.subject] || 10000;
+  const n = state.seg.conds.length;
+  const factor = Math.pow(0.62, n) * (state.seg.logic === 'OR' ? 1.9 : 1);
+  const cap = Math.round(base * 0.98 / 10) * 10;
+  return Math.max(12, Math.min(cap, Math.round(base * factor / 10) * 10));
+}
+
+/* 标签可用性：正式圈选 / 投影统一判定 */
+function tagIssue(t, opt){
+  const scope = opt || {};
+  if(!t) return '标签不存在';
+  if(isExpired(t)) return `有效期至 ${t.validUntil}，已过期，不得正式使用`;
+  if(t.status !== 'active') return `标签状态为「${STATUS[t.status]}」，不可正式使用`;
+  if(t.subject === 'member' && !(scope.tenant || state.seg.tenant)) return '成员标签必须指定 tenant_id';
+  if(t.domain === 'listening'){
+    const src = srcById(t.source);
+    if(!src || src.status !== 'registered') return '听歌域数据源尚未完成登记审批';
+  }
+  if(isStale(t.code)) return '最近计算任务失败，标签结果已过期';
+  return '';
+}
+
+function projectionIssue(t, p){
+  if(!p) return '用途不存在';
+  if(isExpired(t)) return `有效期至 ${t.validUntil}，已过期`;
+  if(t.status !== 'active') return `标签${STATUS[t.status]}，不可投影`;
+  if(t.domain === 'listening'){
+    const src = srcById(t.source);
+    if(!src || src.status !== 'registered') return '听歌域数据源未登记，不可投影';
+  }
+  if(p.id === 'music_rank' && MUSIC_RANK_FORBIDDEN.includes(t.domain)) return '付费 / 风险 / 健康属性禁止参与音乐排序';
+  if(!p.subjects.includes(t.subject)) return `用途不支持「${SUBJECTS[t.subject]}」主体`;
+  if(!p.domains.includes(t.domain)) return `${DOMAINS[t.domain]}域不在该用途白名单`;
+  if(p.id === 'risk_control' && t.domain !== 'risk') return '风控用途仅允许 risk 域';
+  if(!state.personalization && PERSONAL_TAGS.includes(t.code)) return '用户已关闭个性化，个人兴趣与序列不可投影';
+  if(isStale(t.code)) return '最近计算失败，结果已过期';
+  return '';
+}
+
+/* =========================================================
+   导航与外壳
+   ========================================================= */
+const navItems = [
+  {id:'overview',label:'标签资产总览',ico:'◧',group:'治理'},
+  {id:'catalog',label:'标签资产',ico:'◈'},
+  {id:'sources',label:'来源与口径',ico:'⇄'},
+  {id:'profile',label:'客户 360',ico:'◎',group:'运营'},
+  {id:'segments',label:'人群圈选',ico:'⧉'},
+  {id:'jobs',label:'计算任务',ico:'↻'},
+  {id:'usage',label:'用途授权',ico:'⚿',group:'管控'},
+  {id:'approvals',label:'审批中心',ico:'✓'},
+  {id:'privacy',label:'隐私与删除',ico:'⛨'},
+  {id:'audit',label:'访问审计',ico:'⌘'}
+];
+
+function renderNav(){
+  const dyn = {
+    approvals: approvals.length,
+    catalog: tags.length,
+    jobs: jobs.filter(j=>j.status==='running'||j.status==='queued').length,
+    privacy: deletionRequests.filter(d=>d.status!=='completed').length,
+    sources: sources.filter(s=>s.status==='pending').length
+  };
+  let html = '';
+  navItems.forEach(it=>{
+    if(it.group) html += `<div class="nav-label">${it.group}</div>`;
+    const n = dyn[it.id];
+    html += `<button class="nav-item ${state.view===it.id?'active':''}" data-act="nav" data-id="${it.id}">
+      <span class="nav-ico">${it.ico}</span><span>${it.label}</span>
+      ${n?`<span class="nav-count">${n}</span>`:''}
+    </button>`;
+  });
+  $('#nav').innerHTML = html;
+  $('#crumb').textContent = (navItems.find(n=>n.id===state.view)||{}).label || '';
+  $('#subjectSwitch').innerHTML = ['user','tenant','member'].map(s=>
+    `<button class="${state.subject===s?'on':''}" data-act="subject" data-id="${s}">${SUBJECTS[s]}</button>`).join('');
+}
+
+/* =========================================================
+   总览
+   ========================================================= */
+function renderOverview(){
+  const active = tags.filter(t=>t.status==='active' && !isExpired(t)).length;
+  const sens = tags.filter(t=>t.sensitive).length;
+  const expired = tags.filter(t=>isExpired(t)).length;
+  const stale = tags.filter(t=>isStale(t.code)).length;
+  const pendingSrc = sources.filter(s=>s.status==='pending').length;
+  const subjectTags = tags.filter(t=>t.subject===state.subject);
+  return `
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">TAG ASSET GOVERNANCE</div>
+      <h1>标签资产总览</h1>
+      <p>标签只作为画像与人群依据，不参与权限判定、积分结算与音乐排序。口径变更、敏感访问、用途扩权与删除均需审批并留痕。</p>
+    </div>
+    <div class="actions">
+      <button class="btn" data-act="nav" data-id="jobs">查看计算任务</button>
+      <button class="btn primary" data-act="new-tag">+ 新建标签</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><span>标签总数</span><b>${tags.length}</b><small>${active} 个生效中 · ${expired} 个已过期</small></div>
+    <div class="stat"><span>当前主体资产</span><b>${subjectTags.length}</b><small>${SUBJECTS[state.subject]}主体 · 切换主体后同步过滤</small></div>
+    <div class="stat"><span>待审批</span><b class="orange">${approvals.length}</b><small><em class="warn">${approvals.filter(a=>a.risk==='高').length} 项高风险</em></small></div>
+    <div class="stat"><span>敏感标签</span><b>${sens}</b><small>读取需授权，导出需二次审批</small></div>
+  </div>
+
+  ${(stale||expired||pendingSrc)?`
+  <div class="panel" style="margin-bottom:18px">
+    <div class="panel-head"><h2>治理待办</h2><span class="sub">按风险排序</span></div>
+    <div class="panel-body">
+      ${stale?`<div class="alert bad"><span>▲</span><div class="grow"><b>${stale} 个标签结果已过期</b><br/>计算任务失败导致数据不可正式使用，需重试或回补。</div><button class="btn sm" data-act="nav" data-id="jobs">查看任务</button></div>`:''}
+      ${expired?`<div class="alert"><span>●</span><div class="grow"><b>${expired} 个标签已过有效期</b><br/>过期标签不得进入正式圈选与推荐投影。</div><button class="btn sm" data-act="nav" data-id="catalog">查看资产</button></div>`:''}
+      ${pendingSrc?`<div class="alert orange"><span>▲</span><div class="grow"><b>听歌域数据源待登记</b><br/>events.playback_started 未通过审批，相关标签不可用。</div><button class="btn sm" data-act="nav" data-id="approvals">去审批</button></div>`:''}
+    </div>
+  </div>`:''}
+
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-head"><h2>运营场景看板</h2><span class="sub">场景 → 人群包 → 效果（演示数据）</span></div>
+      <div class="scen">
+        ${scenarios.map(s=>`
+          <div class="scen-row">
+            <span class="idx">${s.id}</span>
+            <div><b>${s.name}</b><span class="seg-code">${s.code}</span></div>
+            <div><small>${s.seg}</small><small style="color:var(--mint)">${s.metric}</small></div>
+            <span class="cnt">${fmt(s.size)}</span>
+            <button class="link" data-act="open-seg" data-id="${s.id}">载入条件 →</button>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="stack">
+      <div class="panel">
+        <div class="panel-head"><h2>资产健康度</h2><span class="sub">按主体</span></div>
+        <div class="panel-body">
+          ${['user','tenant','member'].map(s=>{
+            const list = tags.filter(t=>t.subject===s);
+            const ok = list.filter(t=>t.status==='active'&&!isExpired(t)&&!isStale(t.code)).length;
+            const pct = list.length ? Math.round(ok/list.length*100) : 0;
+            return `<div style="margin-bottom:12px">
+              <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px"><span>${SUBJECTS[s]}</span><span class="mono">${ok}/${list.length} 可用</span></div>
+              <div class="bar ${pct>80?'mint':pct>50?'gold':'danger'}"><i style="width:${pct}%"></i></div>
+            </div>`;
+          }).join('')}
+          <div class="hint">可用 = 生效中 + 未过期 + 最近计算成功。</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>最近计算任务</h2><span class="sub">实时（模拟）</span></div>
+        <div class="panel-body" style="padding:6px 16px 10px">
+          ${jobs.slice(0,4).map(j=>`
+            <div class="evt" style="align-items:center">
+              <time>${j.id.slice(-3)}</time>
+              <div class="grow" style="min-width:0"><b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${j.tag}</b><small>${j.mode==='full'?'全量':'增量'} · ${j.duration}</small></div>
+              <span class="badge b-${j.status}">${j.status==='running'?j.progress+'%':({succeeded:'成功',failed:'失败',queued:'排队中'})[j.status]}</span>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="alert hintline"><span>ⓘ</span><div class="grow">本项目为离线演示原型：所有数字、审批与任务均为本地模拟，不代表生产实现。</div></div>
+    </div>
+  </div>`;
+}
+
+/* =========================================================
+   标签资产
+   ========================================================= */
+function tagRow(t){
+  return `<tr>
+    <td><div class="t-main"><b>${esc(t.name)}</b><span>${t.code}</span></div></td>
+    <td><span class="badge b-${t.layer}">${LAYERS[t.layer]}</span></td>
+    <td>${SUBJECTS[t.subject]}</td>
+    <td class="muted">${DOMAINS[t.domain]||t.domain}</td>
+    <td class="num">${fmt(t.hits)}</td>
+    <td class="num">${t.coverage}</td>
+    <td>${isStale(t.code)?'<span class="badge b-expired">数据过期</span>':t.freq}</td>
+    <td>${t.sensitive?'<span class="badge b-sens">敏感</span>':'<span class="muted">—</span>'}</td>
+    <td><span class="badge b-${tagState(t)}">${STATUS[tagState(t)]||t.status}</span>${t.authoritative?' <span class="badge b-lock">只读</span>':''}</td>
+    <td>${t.owner}</td>
+    <td class="right"><button class="btn sm" data-act="open-tag" data-id="${t.code}">详情</button></td>
+  </tr>`;
+}
+
+function renderCatalog(){
+  const list = tags.filter(t=>
+    t.subject===state.subject &&
+    (state.layer==='all'||t.layer===state.layer) &&
+    (state.status==='all'||tagState(t)===state.status) &&
+    (!state.q || (t.code+t.name+t.owner).toLowerCase().includes(state.q.toLowerCase()))
+  );
+  return `
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">TAG CATALOG · ${SUBJECTS[state.subject]}</div>
+      <h1>标签资产</h1>
+      <p>编码一经发布不可修改；口径变更生成新版本，运行中任务继续使用旧版本。权威事实不可被人工或模型覆盖，过期标签不得正式使用。</p>
+    </div>
+    <div class="actions">
+      <button class="btn" data-act="nav" data-id="sources">查看来源</button>
+      <button class="btn primary" data-act="new-tag">+ 新建标签</button>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="toolbar">
+      <div class="search"><span>⌕</span><input class="input" id="tagQ" placeholder="搜索编码、名称或 Owner" value="${esc(state.q)}" data-input="q"/></div>
+      <select class="select" data-input="layer">
+        <option value="all">全部层级</option>
+        ${Object.entries(LAYERS).map(([k,v])=>`<option value="${k}" ${state.layer===k?'selected':''}>${v}标签</option>`).join('')}
+      </select>
+      <select class="select" data-input="status">
+        <option value="all">全部状态</option>
+        ${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${state.status===k?'selected':''}>${v}</option>`).join('')}
+      </select>
+      <span class="grow"></span>
+      <span class="muted">${SUBJECTS[state.subject]}主体 ${list.length} 个标签 · 覆盖 ${fmt(list.reduce((s,t)=>s+t.hits,0))} 人次</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>标签</th><th>层级</th><th>主体</th><th>域</th><th>命中</th><th>覆盖</th><th>更新</th><th>敏感</th><th>状态</th><th>Owner</th><th></th></tr></thead>
+        <tbody>${list.length?list.map(tagRow).join(''):`<tr><td colspan="11"><div class="empty"><b>没有匹配的标签</b><p>调整层级、状态或搜索关键词后重试。切换主体也会改变列表范围。</p></div></td></tr>`}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+/* =========================================================
+   来源与口径
+   ========================================================= */
+function renderSources(){
+  return `
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">SOURCE REGISTRY</div>
+      <h1>来源与口径</h1>
+      <p>标签只能引用已登记字段。新增域（如 listening）必须先完成数据源登记、口径与合规审批，未通过前相关标签不可正式使用。</p>
+    </div>
+    <div class="actions"><button class="btn primary" data-act="source-new">+ 登记数据源</button></div>
+  </div>
+  <div class="stats">
+    <div class="stat"><span>已登记来源</span><b>${sources.filter(s=>s.status==='registered').length}</b><small>覆盖 ${new Set(sources.filter(s=>s.status==='registered').map(s=>s.domain)).size} 个域</small></div>
+    <div class="stat"><span>待审批</span><b class="orange">${sources.filter(s=>s.status==='pending').length}</b><small><em class="warn">听歌域未通过前不可用</em></small></div>
+    <div class="stat"><span>质量告警</span><b>1</b><small>播放事件完整性待核验</small></div>
+    <div class="stat"><span>权威来源</span><b>3</b><small>只读事实，不允许标签覆盖</small></div>
+  </div>
+  <div class="panel">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>数据源</th><th>系统 / 表</th><th>主体</th><th>域</th><th>关键字段</th><th>质量</th><th>状态</th><th>依赖标签</th><th></th></tr></thead>
+        <tbody>${sources.map(s=>{
+          const deps = tags.filter(t=>t.source===s.id).length;
+          return `<tr>
+            <td><div class="t-main"><b>${s.name}</b><span>${s.id}</span></div></td>
+            <td class="muted">${s.system}<br/><span class="mono">${s.table}</span></td>
+            <td>${SUBJECTS[s.subject]}</td>
+            <td>${DOMAINS[s.domain]}</td>
+            <td class="mono" style="font-size:10px;max-width:190px">${s.fields}</td>
+            <td class="num">${s.quality}</td>
+            <td><span class="badge ${s.status==='registered'?'b-active':'b-pending'}">${s.status==='registered'?'已登记':'待审批'}</span></td>
+            <td class="num">${deps}</td>
+            <td class="right"><button class="btn sm" data-act="source-detail" data-id="${s.id}">详情</button></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+/* =========================================================
+   客户 360
+   ========================================================= */
+function groupsFor(c){
+  const order = ['profile','usage','creation','billing','lifecycle','service','health','risk','listening'];
+  return order.map(d=>{
+    const items = Object.keys(c.vals).filter(code=>{
+      const t = tagByCode(code);
+      return t && t.domain === d && t.subject === c.subject;
+    });
+    return items.length ? {title:DOMAINS[d], items} : null;
+  }).filter(Boolean);
+}
+
+function renderProfile(){
+  const list = Object.keys(customers).filter(k=>customers[k].subject===state.subject);
+  if(!list.includes(state.customer)) state.customer = list[0] || '';
+  const c = customers[state.customer];
+  if(!c) return `<div class="empty"><b>当前主体下没有客户</b><p>切换主体或补充演示数据。</p></div>`;
+  const showTenant = c.subject === 'member' && c.tenant;
+  return `
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">CUSTOMER 360 · ${SUBJECTS[state.subject]}</div>
+      <h1>客户 360 画像</h1>
+      <p>同一自然人跨租户必须分别归属。标签展示来源、更新时间与有效期；积分与权限字段仅作只读展示，标签不改写任何事实。</p>
+    </div>
+    <div class="actions">
+      <select class="select" data-input="customer">
+        ${list.map(k=>`<option value="${k}" ${state.customer===k?'selected':''}>${customers[k].name} · ${k}</option>`).join('')}
+      </select>
+      <button class="btn" data-act="nav" data-id="segments">圈选相似人群</button>
+    </div>
+  </div>
+
+  ${showTenant?`<div class="alert hintline" style="margin-bottom:14px"><span>⛓</span><div class="grow"><b>成员主体已绑定租户 ${c.tenant}</b><br/>成员标签按 tenant_id + member_id 归属，跨租户不合并；当前展示仅限该租户范围。</div></div>`:''}
+  ${c.removed?`<div class="alert bad" style="margin-bottom:14px"><span>⛨</span><div class="grow"><b>该用户的派生标签与画像已删除</b><br/>删除申请 dr_2201 已完成，仅保留对账所需的交易事实。</div><button class="btn sm" data-act="nav" data-id="privacy">查看记录</button></div>`:''}
+
+  <div class="c360">
+    <div class="panel">
+      <div class="hero">
+        <div class="avatar">${c.name.slice(0,1)}</div>
+        <div><h2>${c.name}</h2><p>${c.meta}</p></div>
+        <div class="badges">${c.badges.map(([cls,txt])=>`<span class="badge ${cls}">${txt}</span>`).join('')}</div>
+      </div>
+      ${c.removed?`<div class="empty"><b>无可用标签画像</b><p>删除完成后不再展示任何派生标签值。</p></div>`:groupsFor(c).map(g=>`
+        <div class="tgroup">
+          <h3>${g.title}</h3>
+          <div class="tags">
+            ${g.items.map(code=>{
+              const t = tagByCode(code);
+              const val = c.vals[code];
+              const masked = t.sensitive && !state.modalData['reveal_'+code];
+              const exp = isExpired(t);
+              const stale = isStale(code);
+              return `<span class="tag ${t.layer} ${t.sensitive?'sens':''} ${exp?'exp':''}" title="${t.name} · ${LAYERS[t.layer]}">
+                <i></i><span class="mono" style="color:var(--text3)">${code.split('.').slice(-1)[0]}</span>
+                <b style="font-weight:500">${masked?'••••••':esc(val)}</b>
+                ${exp?'<small style="color:var(--danger)">已过期</small>':''}
+                ${stale?'<small style="color:var(--danger)">数据过期</small>':''}
+                ${t.sensitive?`<button class="${masked?'':'lock'}" data-act="reveal" data-id="${code}">${masked?'申请查看':'已授权'}</button>`:''}
+                <button data-act="open-tag" data-id="${code}" title="查看标签定义">↗</button>
+              </span>`;
+            }).join('')}
+          </div>
+        </div>`).join('')}
+      ${c.facts.length?`<div class="tgroup">
+        <h3>只读事实（不来自标签）</h3>
+        <div class="tags">
+          ${c.facts.map(([k,v,src])=>`<span class="tag"><i></i>${k} <b style="font-weight:500">${v}</b><small>${src}</small></span>`).join('')}
+        </div>
+      </div>`:''}
+    </div>
+    <div class="rail">
+      <div class="panel">
+        <div class="panel-head"><h2>投影状态</h2><span class="sub">当前用途：音乐推荐</span></div>
+        <div class="panel-body" style="font-size:11px;color:var(--text3);line-height:1.8">
+          ${state.personalization?'<span class="badge b-active">个性化开启</span> 个人兴趣与序列可投影（仍需用途白名单）。':'<span class="badge b-expired">个性化已关闭</span> 个人兴趣与序列已停止投影。'}
+          <div class="hint">付费、风险、健康属性不参与音乐排序；创作偏好不等同听歌兴趣。</div>
+          <button class="btn sm" style="margin-top:9px" data-act="nav" data-id="usage">查看投影明细</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>最近事件</h2><span class="sub">行为流</span></div>
+        <div class="panel-body" style="padding:8px 16px 12px">
+          ${c.events.map(([t,n,d])=>`<div class="evt"><time>${t}</time><div><b>${n}</b><small>${d}</small></div></div>`).join('')}
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>边界说明</h2></div>
+        <div class="panel-body" style="font-size:11px;color:var(--text3);line-height:1.8">
+          标签不授予权限，不修改积分。<br/>
+          敏感标签读取留痕，导出需二次审批。<br/>
+          模型标签展示置信度，低于阈值不写入。<br/>
+          删除申请会清理派生标签与缓存引用。
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* =========================================================
+   人群圈选
+   ========================================================= */
+function exprOf(seg){
+  return `${seg.logic}(${seg.conds.map(c=>`${c.code} ${c.op} ${c.value}`).join(', ') || '∅'})`;
+}
+function segProblems(){
+  return state.seg.conds.map(c=>({cond:c, issue:tagIssue(tagByCode(c.code), {tenant:state.seg.tenant})}));
+}
+
+function renderSegments(){
+  const problems = segProblems().filter(p=>p.issue);
+  const subs = Object.keys(customers).filter(k=>customers[k].subject===state.subject);
+  return `
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">AUDIENCE SEGMENT</div>
+      <h1>人群圈选</h1>
+      <p>圈选基于位图估算，触达前必须生成快照。快照冻结当时的条件、标签版本与人数，后续标签变化不会改写历史快照。</p>
+    </div>
+    <div class="actions">
+      <button class="btn" data-act="seg-export" ${state.subject==='member'?'disabled':''}>导出名单</button>
+      <button class="btn primary" data-act="seg-snapshot">生成快照</button>
+    </div>
+  </div>
+
+  <div class="builder">
+    <div class="panel">
+      <div class="panel-head"><h2>圈选条件</h2><span class="sub">主体：${SUBJECTS[state.subject]} · 最多 8 个条件</span></div>
+      <div class="panel-body">
+        <div class="chips" style="margin-bottom:12px">
+          <span class="chip ${state.subject==='user'?'on':''}" data-act="subject" data-id="user" style="cursor:pointer">用户</span>
+          <span class="chip ${state.subject==='tenant'?'on':''}" data-act="subject" data-id="tenant" style="cursor:pointer">租户</span>
+          <span class="chip ${state.subject==='member'?'on':''}" data-act="subject" data-id="member" style="cursor:pointer">成员</span>
+          ${state.subject==='member'?`<select class="select" style="height:27px" data-input="seg-tenant">
+            <option value="t_208" ${state.seg.tenant==='t_208'?'selected':''}>租户 t_208 · SonicLab</option>
+            <option value="t_105" ${state.seg.tenant==='t_105'?'selected':''}>租户 t_105 · 云声文化</option>
+          </select>`:''}
+          ${state.seg.scenario?`<span class="chip on">场景：${state.seg.scenario}</span>`:''}
+        </div>
+        ${state.seg.conds.map((c,i)=>{
+          const t = tagByCode(c.code);
+          const issue = tagIssue(t, {tenant:state.seg.tenant});
+          return `<div class="cond ${issue?'bad':''}">
+            <span class="k">${c.code}</span>
+            <span class="op">${c.op}</span>
+            <span class="v">${esc(c.value)}</span>
+            ${t&&t.sensitive?'<span class="badge b-sens">敏感</span>':''}
+            <button class="rm" data-act="seg-remove" data-id="${i}" title="移除">×</button>
+            ${issue?`<span class="why">阻断：${issue}</span>`:''}
+          </div>`;
+        }).join('')}
+        <div class="logic">
+          条件关系
+          <button class="${state.seg.logic==='AND'?'on':''}" data-act="seg-logic" data-id="AND">AND 全部满足</button>
+          <button class="${state.seg.logic==='OR'?'on':''}" data-act="seg-logic" data-id="OR">OR 任一满足</button>
+          <span class="grow"></span>
+          <button class="btn sm" data-act="seg-add">+ 添加条件</button>
+        </div>
+        <div class="hint">仅支持已登记字段与白名单算子（= / ≠ / ≥ / ≤ / in / not in / within）。不支持自由 SQL。</div>
+        ${problems.length?`<div class="alert bad" style="margin-top:12px"><span>▲</span><div class="grow"><b>${problems.length} 个条件不可用</b><br/>${problems.map(p=>p.issue).filter((v,i,a)=>a.indexOf(v)===i).join('；')}</div></div>`:''}
+        <div class="mt" style="margin-top:16px;display:flex;gap:9px;align-items:center;flex-wrap:wrap">
+          <button class="btn" data-act="seg-estimate" ${problems.length?'disabled':''}>估算命中人数</button>
+          <span class="muted">基于位图估算，秒级返回，不产生明细</span>
+          ${state.seg.stale?`<span class="badge b-expired">条件已变更，需重新估算</span>`:''}
+        </div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="panel estimate">
+        <div class="cap">预估命中</div>
+        <div class="big">${state.seg.estimating?'…':(state.seg.estimate==null?'—':fmt(state.seg.estimate))}</div>
+        <div class="muted" style="margin-bottom:12px">
+          ${state.seg.estimate==null?'尚未估算':`覆盖率 ${(state.seg.estimate/ (state.subject==='user'?498200:state.subject==='tenant'?780:6400)*100).toFixed(1)}% · 触达成本约 ${fmt(Math.round(state.seg.estimate*0.06))} 元`}
+        </div>
+        <div class="bar mint"><i style="width:${state.seg.estimate==null?0:Math.min(100,state.seg.estimate/(state.subject==='user'?498200:state.subject==='tenant'?780:6400)*100).toFixed(1)}%"></i></div>
+        <div class="hint">估算存在 ±3% 误差；导出以快照内明细为准。</div>
+        <div class="hint mono" style="margin-top:8px">${esc(exprOf(state.seg))}</div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>最近快照</h2><span class="sub">只读引用</span></div>
+        <div class="panel-body" style="padding:8px 16px 12px">
+          ${state.snapshots.filter(s=>s.subject===state.subject).length?state.snapshots.filter(s=>s.subject===state.subject).map(s=>`
+            <div class="snap">
+              <div class="grow"><b style="font-size:11.5px">${s.name}</b><div class="mono">${s.id} · ${s.time} · 到期 ${s.expire}</div></div>
+              <span class="mono">${fmt(s.size)}</span>
+              <button class="btn sm" data-act="snap-detail" data-id="${s.id}">详情</button>
+            </div>`).join(''):`<div class="empty" style="padding:22px 8px"><b>暂无快照</b><p>完成估算后可生成。</p></div>`}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* =========================================================
+   计算任务
+   ========================================================= */
+function renderJobs(){
+  return `
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">COMPUTE PIPELINE</div>
+      <h1>计算任务</h1>
+      <p>按标签版本与时间窗口幂等执行；分片断点续算，重复执行不产生重复历史。任务失败时标签进入“数据过期”状态，不可正式使用。</p>
+    </div>
+    <div class="actions"><button class="btn" data-act="job-refresh">刷新状态</button></div>
+  </div>
+  <div class="stats">
+    <div class="stat"><span>今日任务</span><b>${jobs.length}</b><small>窗口 T+1 需在 06:00 前完成</small></div>
+    <div class="stat"><span>成功</span><b>${jobs.filter(j=>j.status==='succeeded').length}</b><small>位图已更新</small></div>
+    <div class="stat"><span>运行中</span><b class="orange">${jobs.filter(j=>j.status==='running').length}</b><small>最大并发 4 分片</small></div>
+    <div class="stat"><span>失败</span><b>${jobs.filter(j=>j.status==='failed').length}</b><small><em class="bad">失败标签不可用</em></small></div>
+  </div>
+  <div class="panel">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>任务</th><th>标签 / 版本</th><th>模式</th><th>窗口</th><th>进度</th><th>耗时</th><th>状态</th><th></th></tr></thead>
+        <tbody>${jobs.map(j=>`
+          <tr>
+            <td class="mono">${j.id}</td>
+            <td><div class="t-main"><b>${j.tag}</b><span>${j.ver} · ${j.shards}</span></div></td>
+            <td>${j.mode==='full'?'全量':'增量'}</td>
+            <td class="mono" style="font-size:10.5px">${j.window}</td>
+            <td><span class="bar sm ${j.status==='failed'?'danger':'mint'}"><i style="width:${j.progress}%"></i></span><span class="mono">${j.progress}%</span></td>
+            <td class="mono">${j.duration}</td>
+            <td><span class="badge b-${j.status}">${({running:'计算中',succeeded:'成功',failed:'失败',queued:'排队中'})[j.status]}</span></td>
+            <td class="right">
+              <button class="btn sm" data-act="job-detail" data-id="${j.id}">详情</button>
+              ${j.status==='failed'?`<button class="btn sm danger" data-act="job-retry" data-id="${j.id}">重试</button>`:''}
+            </td>
+          </tr>`).join('')}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+/* =========================================================
+   用途授权
+   ========================================================= */
+function renderUsage(){
+  const p = PURPOSES.find(x=>x.id===state.usage.purpose) || PURPOSES[0];
+  const rows = tags.filter(t=>t.subject===state.subject);
+  const projected = rows.map(t=>({ t, issue: projectionIssue(t, p) }));
+  const allowed = projected.filter(r=>!r.issue);
+  const blocked = projected.filter(r=>r.issue);
+  const list = state.usage.filter==='allow' ? allowed : state.usage.filter==='block' ? blocked : projected;
+  return `
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">PURPOSE &amp; PROJECTION</div>
+      <h1>用途授权</h1>
+      <p>标签只能按用途白名单投影：用途决定可用域与主体。推荐排序不得使用付费、风险、健康属性；关闭个性化后个人兴趣与序列停止投影。</p>
+    </div>
+    <div class="actions"><button class="btn" data-act="nav" data-id="approvals">查看审批</button></div>
+  </div>
+
+  ${state.personalization?'':'<div class="alert bad" style="margin-bottom:14px"><span>⛨</span><div class="grow"><b>个性化已关闭</b><br/>个人兴趣与序列特征（风格、时长、人声、听歌流派）已停止投影，推荐仅能使用非个性化特征。</div><button class="btn sm" data-act="nav" data-id="privacy">去隐私页</button></div>'}
+
+  <div class="purposes" style="margin-bottom:18px">
+    ${PURPOSES.map(x=>{
+      const az = authz.find(a=>a.purpose===x.id);
+      const on = x.id===state.usage.purpose;
+      return `<button class="purpose ${on?'on':''}" data-act="purpose-select" data-id="${x.id}">
+        <b>${x.name}</b>
+        <small>${x.desc}</small>
+        <div class="pf"><span class="badge ${az&&az.status==='active'?'b-active':'b-pending'}">${az&&az.status==='active'?'已授权':'待授权'}</span><span class="mono" style="font-size:9.5px;color:var(--text4)">至 ${x.validUntil}</span></div>
+      </button>`;
+    }).join('')}
+  </div>
+
+  <div class="panel" style="margin-bottom:18px">
+    <div class="panel-head">
+      <h2>投影预览 · ${p.name}（${SUBJECTS[state.subject]}主体）</h2>
+      <span class="sub">允许 ${allowed.length} · 阻断 ${blocked.length}</span>
+    </div>
+    <div class="toolbar" style="border-bottom:1px solid var(--line)">
+      <div class="chips">
+        <span class="chip ${state.usage.filter==='all'?'on':''}" data-act="proj-filter" data-id="all" style="cursor:pointer">全部 ${projected.length}</span>
+        <span class="chip ${state.usage.filter==='allow'?'on':''}" data-act="proj-filter" data-id="allow" style="cursor:pointer">允许 ${allowed.length}</span>
+        <span class="chip ${state.usage.filter==='block'?'on':''}" data-act="proj-filter" data-id="block" style="cursor:pointer">阻断 ${blocked.length}</span>
+      </div>
+      <span class="grow"></span>
+      <span class="muted">${esc(p.rule)}</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>标签</th><th>层级</th><th>域</th><th>有效期</th><th>投影结果</th><th>原因</th></tr></thead>
+        <tbody>${list.length?list.map(({t,issue})=>`
+          <tr>
+            <td><div class="t-main"><b>${t.name}</b><span>${t.code}</span></div></td>
+            <td><span class="badge b-${t.layer}">${LAYERS[t.layer]}</span></td>
+            <td>${DOMAINS[t.domain]}</td>
+            <td class="mono">${t.validUntil||'长期'}</td>
+            <td>${issue?'<span class="badge b-block">阻断</span>':'<span class="badge b-allow">允许</span>'}</td>
+            <td style="color:${issue?'var(--danger)':'var(--text4)'};max-width:280px">${issue||'符合用途白名单'}</td>
+          </tr>`).join(''):`<tr><td colspan="6"><div class="empty"><b>没有符合条件的标签</b><p>切换筛选或用途后重试。</p></div></td></tr>`}</tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h2>授权记录</h2><span class="sub">用途 → 范围 → 有效期</span></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>用途</th><th>授权范围</th><th>负责人</th><th>有效期</th><th>状态</th><th>限制说明</th><th></th></tr></thead>
+        <tbody>${authz.map(a=>{
+          const name = (PURPOSES.find(p2=>p2.id===a.purpose)||{}).name || a.purpose;
+          return `<tr>
+            <td><b style="font-weight:600">${name}</b></td>
+            <td class="mono" style="font-size:10px">${a.scope}</td>
+            <td>${a.owner}</td>
+            <td class="mono">${a.validUntil}</td>
+            <td><span class="badge ${a.status==='active'?'b-active':'b-pending'}">${a.status==='active'?'生效中':'待审批'}</span></td>
+            <td style="color:var(--text4);max-width:260px">${a.note}</td>
+            <td class="right"><button class="btn sm" data-act="auth-request" data-id="${a.purpose}">申请扩围</button></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+/* =========================================================
+   审批中心
+   ========================================================= */
+function renderApprovals(){
+  return `
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">GOVERNANCE QUEUE</div>
+      <h1>审批中心</h1>
+      <p>标签发布、口径变更、敏感导出、人工导入、域登记与用途扩围必须审批。审批结果会更新关联对象并写入审计，记录不可删除。</p>
+    </div>
+    <div class="actions"><span class="badge b-pending">${approvals.length} 待处理</span></div>
+  </div>
+  <div class="panel">
+    <div class="toolbar">
+      <div class="chips">
+        <span class="chip ${state.apTab==='pending'?'on':''}" data-act="ap-tab" data-id="pending" style="cursor:pointer">待处理 ${approvals.length}</span>
+        <span class="chip ${state.apTab==='history'?'on':''}" data-act="ap-tab" data-id="history" style="cursor:pointer">审批记录 ${approvalHistory.length}</span>
+      </div>
+      <span class="grow"></span>
+      <span class="muted">驳回必须填写理由，并同步申请人</span>
+    </div>
+    ${state.apTab==='pending'?`
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>类型</th><th>对象</th><th>申请人</th><th>风险</th><th>申请理由</th><th>提交时间</th><th></th></tr></thead>
+        <tbody>${approvals.length?approvals.map(a=>`
+          <tr>
+            <td><span class="badge ${a.risk==='高'?'b-high':a.risk==='中'?'b-mid':'b-low'}">${a.type}</span></td>
+            <td><div class="t-main"><b>${a.target}</b><span>${a.id}</span></div></td>
+            <td>${a.applicant}</td>
+            <td><span class="badge ${a.risk==='高'?'b-high':a.risk==='中'?'b-mid':'b-low'}">${a.risk}风险</span></td>
+            <td style="max-width:250px;color:var(--text3)">${a.reason}</td>
+            <td class="mono">${a.time}</td>
+            <td class="right" style="white-space:nowrap">
+              <button class="btn sm" data-act="approval-detail" data-id="${a.id}">详情</button>
+              <button class="btn sm" data-act="approve" data-id="${a.id}">通过</button>
+              <button class="btn sm danger" data-act="reject" data-id="${a.id}">驳回</button>
+            </td>
+          </tr>`).join(''):`<tr><td colspan="7"><div class="empty"><b>审批队列已清空</b><p>新的标签发布、域登记或导出申请会出现在这里。</p></div></td></tr>`}</tbody>
+      </table>
+    </div>`:`
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>审批单</th><th>类型</th><th>对象</th><th>结果</th><th>审批人</th><th>时间</th><th>说明</th></tr></thead>
+        <tbody>${approvalHistory.map(h=>`
+          <tr>
+            <td class="mono">${h.id}</td>
+            <td>${h.type}</td>
+            <td>${h.target}</td>
+            <td><span class="badge ${h.result==='通过'?'b-active':'b-expired'}">${h.result}</span></td>
+            <td>${h.actor}</td>
+            <td class="mono">${h.time}</td>
+            <td style="color:var(--text4)">${h.note}</td>
+          </tr>`).join('')}</tbody>
+      </table>
+    </div>`}
+  </div>`;
+}
+
+/* =========================================================
+   隐私与删除
+   ========================================================= */
+function deletionRow(d){
+  const pct = d.status==='completed'?100:d.status==='running'?(d.progress||0):0;
+  return `<tr>
+    <td><div class="t-main"><b>${d.subjectName} · ${d.subjectId}</b><span>${d.id}</span></div></td>
+    <td style="max-width:220px;color:var(--text3)">${d.scope.join('、')}</td>
+    <td><span class="badge ${d.status==='completed'?'b-active':d.status==='running'?'b-running':'b-pending'}">${{pending:'待审批',approved:'已批准',running:'执行中',completed:'已完成'}[d.status]||d.status}</span></td>
+    <td style="min-width:130px"><span class="bar sm ${d.status==='completed'?'mint':''}"><i style="width:${pct}%"></i></span><span class="mono">${pct}%</span></td>
+    <td class="mono">${d.submitted}</td>
+    <td class="right"><button class="btn sm" data-act="del-detail" data-id="${d.id}">详情</button></td>
+  </tr>`;
+}
+function renderPrivacy(){
+  return `
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">PRIVACY &amp; ERASURE</div>
+      <h1>隐私与删除</h1>
+      <p>关闭个性化后停止个人兴趣与序列投影；删除申请需覆盖标签结果、派生画像、缓存引用与模型特征，并在完成后保留最小化审计元数据。</p>
+    </div>
+    <div class="actions"><button class="btn primary" data-act="del-new">+ 提交删除申请</button></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="stack">
+      <div class="panel">
+        <div class="panel-head"><h2>个性化开关</h2><span class="sub">影响投影，不删除历史值</span></div>
+        <div class="panel-body">
+          <div style="display:flex;align-items:center;gap:14px">
+            <div class="grow">
+              <b style="font-size:12.5px">个人兴趣与序列投影</b>
+              <div class="hint">关闭后，风格偏好、时长偏好、人声偏好、听歌流派与模型版本偏好不再进入音乐推荐与序列特征。</div>
+            </div>
+            <button class="switch ${state.personalization?'on':''}" data-act="toggle-personalization" aria-label="切换个性化"><b></b></button>
+          </div>
+          <div class="alert ${state.personalization?'ok':'bad'}" style="margin-top:13px;margin-bottom:0">
+            <span>${state.personalization?'✓':'⛨'}</span>
+            <div class="grow">${state.personalization?'个性化开启：个人兴趣标签可按用途白名单投影。':'个性化已关闭：个人兴趣与序列特征已停止投影，仅保留非个性化特征。'}</div>
+          </div>
+          <div class="hint">状态变更会写入访问审计；历史标签值保留，直到删除申请或保留期到期。</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>删除申请</h2><span class="sub">含派生数据</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>对象</th><th>清理范围</th><th>状态</th><th>进度</th><th>提交时间</th><th></th></tr></thead>
+            <tbody>${deletionRequests.map(deletionRow).join('')}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="panel">
+        <div class="panel-head"><h2>保留策略</h2><span class="sub">默认值，需法务确认</span></div>
+        <div class="panel-body" style="padding:6px 16px 12px">
+          ${[
+            ['标签结果','生效期 + 30 天','到期归档，不参与正式使用'],
+            ['派生画像缓存','24 小时','Redis 缓存按 TTL 失效'],
+            ['人群快照','7 天','导出文件 30 天，到期回收'],
+            ['模型特征','随标签删除同步清理','特征库按主体键删除'],
+            ['审计元数据','180 天','仅保留必要字段，不含完整敏感值']
+          ].map(([k,v,n])=>`
+            <div style="padding:10px 0;border-bottom:1px dashed rgba(255,255,255,.06)">
+              <div style="display:flex;justify-content:space-between;gap:10px"><b style="font-size:11.5px;font-weight:600">${k}</b><span class="mono" style="font-size:10px;color:var(--text3)">${v}</span></div>
+              <div class="hint" style="margin-top:2px">${n}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>删除边界</h2></div>
+        <div class="panel-body" style="font-size:11px;color:var(--text3);line-height:1.85">
+          删除覆盖标签结果、派生画像、快照引用与模型特征。<br/>
+          审计只保留操作元数据，不保留完整敏感个人值。<br/>
+          交易与对账事实按法定要求保留，不因删除申请清除。<br/>
+          删除完成后，相关标签不可再被圈选或投影。
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* =========================================================
+   访问审计
+   ========================================================= */
+function renderAudit(){
+  const actions = Array.from(new Set(audits.map(a=>a.action)));
+  const q = state.audit.q.toLowerCase();
+  const list = audits.filter(a=>
+    (state.audit.action==='all'||a.action===state.audit.action) &&
+    (!q || (a.actor+a.target+a.tag+a.purpose).toLowerCase().includes(q))
+  );
+  return `
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">ACCESS AUDIT</div>
+      <h1>访问审计</h1>
+      <p>敏感标签读取、导出、口径变更与个性化开关 100% 留痕。审计只追加，不修改不删除；记录最小化，不保存完整敏感个人值。</p>
+    </div>
+    <div class="actions"><button class="btn" data-act="audit-export">导出审计日志</button></div>
+  </div>
+  <div class="panel">
+    <div class="toolbar">
+      <div class="search"><span>⌕</span><input class="input" id="auditQ" placeholder="搜索操作人、对象或标签" value="${esc(state.audit.q)}" data-input="audit-q"/></div>
+      <select class="select" data-input="audit-action">
+        <option value="all">全部动作</option>
+        ${actions.map(a=>`<option value="${a}" ${state.audit.action===a?'selected':''}>${a}</option>`).join('')}
+      </select>
+      <span class="grow"></span>
+      <span class="muted">共 ${list.length} 条 · 最近 7 日敏感访问 128 次</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>操作人</th><th>动作</th><th>对象</th><th>标签</th><th>条数</th><th>用途</th><th>时间</th><th></th></tr></thead>
+        <tbody>${list.length?list.map(a=>`
+          <tr>
+            <td>${a.actor}</td>
+            <td><span class="badge ${a.action.includes('敏感')||a.action.includes('导出')||a.action.includes('删除')?'b-pending':'b-metric'}">${a.action}</span></td>
+            <td class="mono" style="font-size:10.5px">${a.target}</td>
+            <td class="mono" style="font-size:10.5px;color:var(--text3)">${a.tag}</td>
+            <td class="num">${typeof a.rows==='number'?fmt(a.rows):a.rows}</td>
+            <td style="color:var(--text3)">${a.purpose}</td>
+            <td class="mono">${a.time}</td>
+            <td class="right"><button class="btn sm" data-act="audit-detail" data-id="${a.id}">详情</button></td>
+          </tr>`).join(''):`<tr><td colspan="8"><div class="empty"><b>没有匹配记录</b><p>调整关键词或动作筛选。</p></div></td></tr>`}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+/* =========================================================
+   渲染主入口
+   ========================================================= */
+function render(){
+  renderNav();
+  const map = {
+    overview:renderOverview, catalog:renderCatalog, sources:renderSources,
+    profile:renderProfile, segments:renderSegments, jobs:renderJobs,
+    usage:renderUsage, approvals:renderApprovals, privacy:renderPrivacy, audit:renderAudit
+  };
+  $('#app').innerHTML = `<div class="view">${(map[state.view]||renderOverview)()}</div>`;
+  if(state.focus){
+    const el = document.getElementById(state.focus);
+    if(el){ el.focus(); if(el.setSelectionRange) el.setSelectionRange(el.value.length, el.value.length); }
+  }
+}
+
+/* =========================================================
+   抽屉与弹窗
+   ========================================================= */
+function toast(msg, err){
+  const el = document.createElement('div');
+  el.className = 'toast' + (err?' err':'');
+  el.textContent = msg;
+  $('#toast').appendChild(el);
+  setTimeout(()=>el.remove(), 2800);
+}
+function openDrawer(html, name){
+  state.drawer = name || '';
+  $('#drawer').innerHTML = html;
+  $('#mask').classList.add('open');
+}
+function closeDrawer(){ state.drawer=''; $('#mask').classList.remove('open'); }
+function openModal(html, wide){
+  $('#modalRoot').innerHTML = `<div class="modal ${wide?'wide':''}">${html}</div>`;
+  $('#modalRoot').classList.add('open');
+}
+function closeModal(){ $('#modalRoot').classList.remove('open'); $('#modalRoot').innerHTML=''; }
+
+function drawerTag(){
+  const t = tagByCode(state.activeTag) || tags[0];
+  const tabs = [['overview','概览'],['versions','口径版本'],['dryrun','试算'],['jobs','计算记录']];
+  const issue = tagIssue(t, {tenant:state.seg.tenant});
+  let body = '';
+  if(state.tagTab==='overview'){
+    body = `
+      <div class="kv"><span>标签编码</span><b class="mono">${t.code}</b></div>
+      <div class="kv"><span>主体类型</span><b>${SUBJECTS[t.subject]}${t.tenant?' · 租户 '+t.tenant:''}</b></div>
+      <div class="kv"><span>分层 / 域</span><b><span class="badge b-${t.layer}">${LAYERS[t.layer]}</span> ${DOMAINS[t.domain]}</b></div>
+      <div class="kv"><span>来源</span><b class="mono">${t.source}</b></div>
+      <div class="kv"><span>枚举值</span><b>${t.values}</b></div>
+      <div class="kv"><span>更新频率</span><b>${t.freq}</b></div>
+      <div class="kv"><span>当前命中</span><b>${fmt(t.hits)} · 覆盖率 ${t.coverage}</b></div>
+      <div class="kv"><span>有效期</span><b>${t.validUntil||'长期有效'}${isExpired(t)?' <span class="badge b-expired">已过期</span>':''}</b></div>
+      <div class="kv"><span>Owner</span><b>${t.owner}</b></div>
+      <div class="kv"><span>敏感</span><b>${t.sensitive?'是，读取需授权并留痕':'否'}</b></div>
+      <div class="section-t">业务口径</div>
+      <div class="codebox"><span class="cm">// 仅用于画像与人群依据，不参与权限、积分与音乐排序</span>
+${t.authoritative?'<span class="cm">// 权威事实：只读，禁止人工或模型覆盖</span>\n':''}subject = ${t.subject}
+domain  = ${t.domain}
+source  = ${t.source}
+value   = ${t.values.split(' / ')[0]}
+
+${esc(t.definition)}</div>
+      ${issue?`<div class="alert bad" style="margin-top:14px"><span>▲</span><div class="grow"><b>当前不可正式使用</b><br/>${issue}</div></div>`:''}
+      <div class="section-t">当前状态</div>
+      <div class="timeline">
+        <div class="tl-item on"><b>${t.version} · ${STATUS[tagState(t)]||t.status}</b><small>最近更新 ${t.lastUpdated} · Owner ${t.owner}</small></div>
+        <div class="tl-item"><b>变更需审批</b><small>口径变更生成新版本，旧版本保留供审计</small></div>
+      </div>`;
+  }else if(state.tagTab==='versions'){
+    body = `
+      <div class="alert ok"><span>✓</span><div class="grow"><b>当前版本 ${t.version}</b><br/>运行中任务继续使用旧版本，不会因发布而改变口径。</div></div>
+      <div class="codebox"><span class="kw">version</span> ${t.version}
+<span class="kw">status</span>  ${t.status}
+<span class="kw">window</span>  30d
+<span class="kw">source</span>  ${t.source}
+<span class="kw">owner</span>   ${t.owner}
+<span class="kw">valid</span>   ${t.validUntil||'长期'}</div>
+      <div class="section-t">历史版本</div>
+      <div class="timeline">
+        <div class="tl-item on"><b>${t.version} · 生效中</b><small>命中 ${fmt(t.hits)} · 覆盖率 ${t.coverage}</small></div>
+        <div class="tl-item"><b>v2 · 已归档</b><small>口径调整 · 2026-09-28</small></div>
+        <div class="tl-item"><b>v1 · 已归档</b><small>首次发布 · 2026-06-01</small></div>
+      </div>
+      <button class="btn primary" style="margin-top:12px" data-act="new-version" data-id="${t.code}">+ 创建 ${bumpVersion(t.version)} 草稿并提交审批</button>`;
+  }else if(state.tagTab==='dryrun'){
+    body = `
+      <p class="muted" style="margin-top:0">试算使用近 30 日数据，仅在沙箱计算，不写入标签结果。发布前必须完成试算。</p>
+      <button class="btn primary" data-act="dry-run" ${state.dryRun.status==='running'?'disabled':''}>${state.dryRun.status==='running'?'试算中…':'运行试算'}</button>
+      ${state.dryRun.status==='running'?`<div class="mt"><div class="bar"><i id="dryBar" style="width:${state.dryRun.progress}%"></i></div><div class="hint">正在扫描分片… <span id="dryPct">${state.dryRun.progress}</span>%</div></div>`:''}
+      ${t.dryResult?`
+        <div class="mt">
+          <div class="stats" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:0">
+            <div class="stat"><span>命中人数</span><b>${fmt(t.dryResult.hits)}</b><small>沙箱结果，不写入</small></div>
+            <div class="stat"><span>覆盖率</span><b>${t.dryResult.coverage}</b><small>较当前 ${t.coverage}</small></div>
+            <div class="stat" style="border-right:0"><span>空值率</span><b>${t.dryResult.nullRate}</b><small>低于 5% 阈值</small></div>
+          </div>
+          <div class="section-t">抽样 3 条</div>
+          <div class="codebox">${t.dryResult.samples.join('\n')}</div>
+          <div class="alert ok" style="margin-top:12px"><span>✓</span><div class="grow">试算通过，可提交发布审批。敏感标签将额外触发合规审批。</div></div>
+          ${t.status==='draft'?`<button class="btn primary" data-act="publish" data-id="${t.code}">提交发布审批</button>`:t.status==='pending'?`<button class="btn primary" data-act="publish" data-id="${t.code}" disabled>已在审批中</button>`:`<button class="btn" disabled>当前版本已生效</button>`}
+        </div>`:''}`;
+  }else{
+    body = `
+      <div class="section-t">最近计算记录</div>
+      ${jobs.filter(j=>j.tag===t.code).concat(jobs.slice(0,2)).slice(0,4).map(j=>`
+        <div class="snap">
+          <div class="grow"><b style="font-size:11.5px">${j.id}</b><div class="mono">${j.mode==='full'?'全量':'增量'} · ${j.window}</div></div>
+          <span class="badge b-${j.status}">${({running:'计算中',succeeded:'成功',failed:'失败',queued:'排队中'})[j.status]}</span>
+        </div>`).join('')}
+      <button class="btn" style="margin-top:12px" data-act="tag-recompute" data-id="${t.code}">触发全量重算</button>
+      <div class="hint">重算按幂等键去重；失败时标签显示“数据过期”，不可正式使用。</div>`;
+  }
+  return `
+    <div class="drawer-head">
+      <div>
+        <div class="eyebrow">${LAYERS[t.layer]}标签 · ${SUBJECTS[t.subject]} · ${DOMAINS[t.domain]}</div>
+        <h2>${t.name}</h2>
+        <div class="code">${t.code}</div>
+      </div>
+      <button class="icon-btn" data-act="close-drawer">×</button>
+    </div>
+    <div class="drawer-body">
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+        <span class="badge b-${tagState(t)}">${STATUS[tagState(t)]||t.status}</span>
+        ${t.sensitive?'<span class="badge b-sens">敏感标签</span>':'<span class="badge b-safe">非敏感</span>'}
+        ${t.authoritative?'<span class="badge b-lock">权威事实 · 只读</span>':'<span class="badge b-metric">'+CERTAIN_LAYERS[t.layer]+'</span>'}
+        <span class="badge b-metric">${t.version}</span>
+      </div>
+      <div class="tabs">${tabs.map(([id,label])=>`<button class="tab ${state.tagTab===id?'on':''}" data-act="tag-tab" data-id="${id}">${label}</button>`).join('')}</div>
+      ${body}
+    </div>`;
+}
+
+function openTag(code){
+  state.activeTag = code; state.tagTab = 'overview'; state.dryRun = {status:'idle',progress:0};
+  openDrawer(drawerTag(), 'tag');
+}
+
+function openJob(id){
+  const j = jobs.find(x=>x.id===id); if(!j) return;
+  openDrawer(`
+    <div class="drawer-head"><div><div class="eyebrow">COMPUTE JOB</div><h2>${j.tag}</h2><div class="code">${j.id} · ${j.ver}</div></div><button class="icon-btn" data-act="close-drawer">×</button></div>
+    <div class="drawer-body">
+      <div style="display:flex;gap:6px;margin-bottom:14px"><span class="badge b-${j.status}">${({running:'计算中',succeeded:'成功',failed:'失败',queued:'排队中'})[j.status]}</span><span class="badge b-metric">${j.mode==='full'?'全量':'增量'}</span></div>
+      <div class="kv"><span>时间窗口</span><b>${j.window}</b></div>
+      <div class="kv"><span>分片</span><b>${j.shards}</b></div>
+      <div class="kv"><span>耗时</span><b>${j.duration}</b></div>
+      <div class="kv"><span>幂等键</span><b class="mono">${j.tag}|${j.ver}|${j.window}</b></div>
+      <div class="kv"><span>影响</span><b>${j.status==='failed'?'该标签数据过期，不可正式使用':'结果已写入标签结果表并刷新位图'}</b></div>
+      ${j.err?`<div class="alert bad" style="margin-top:14px"><span>▲</span><div class="grow"><b>失败原因</b><br/>${j.err}</div></div>`:''}
+      <div class="section-t">分片进度</div>
+      ${Array.from({length:8}).map((_,i)=>{
+        const done = j.status==='succeeded'?100:(j.status==='running'?Math.max(0,Math.min(100,j.progress*1.6-i*11)):0);
+        return `<div style="display:flex;align-items:center;gap:9px;margin-bottom:7px"><span class="mono" style="width:52px;color:var(--text4)">shard ${String(i).padStart(2,'0')}</span><span class="bar sm" style="flex:1"><i style="width:${done}%"></i></span><span class="mono" style="width:38px;text-align:right">${Math.round(done)}%</span></div>`;
+      }).join('')}
+      <div class="section-t">最近事件</div>
+      <div class="timeline">
+        <div class="tl-item on"><b>任务开始</b><small>${j.window}</small></div>
+        <div class="tl-item on"><b>分片调度完成</b><small>16 分片，最大并发 4</small></div>
+        <div class="tl-item"><b>${j.status==='failed'?'任务失败，已停止下游触达':'等待位图索引更新'}</b><small>${j.err||'预计 2 分钟内完成'}</small></div>
+      </div>
+    </div>`, 'job');
+}
+
+function openSource(id){
+  const s = srcById(id); if(!s) return;
+  const deps = tags.filter(t=>t.source===s.id);
+  openDrawer(`
+    <div class="drawer-head"><div><div class="eyebrow">SOURCE REGISTRY</div><h2>${s.name}</h2><div class="code">${s.id}</div></div><button class="icon-btn" data-act="close-drawer">×</button></div>
+    <div class="drawer-body">
+      <div style="display:flex;gap:6px;margin-bottom:14px">
+        <span class="badge ${s.status==='registered'?'b-active':'b-pending'}">${s.status==='registered'?'已登记':'待审批'}</span>
+        <span class="badge b-metric">${DOMAINS[s.domain]}域</span>
+        <span class="badge b-metric">${SUBJECTS[s.subject]}主体</span>
+      </div>
+      <div class="kv"><span>系统</span><b>${s.system}</b></div>
+      <div class="kv"><span>表 / 事件</span><b class="mono">${s.table}</b></div>
+      <div class="kv"><span>关键字段</span><b class="mono">${s.fields}</b></div>
+      <div class="kv"><span>质量评分</span><b>${s.quality}</b></div>
+      <div class="kv"><span>时效</span><b>${s.latency}</b></div>
+      <div class="kv"><span>Owner</span><b>${s.owner}</b></div>
+      <div class="kv"><span>最近校验</span><b>${s.lastCheck}</b></div>
+      <div class="section-t">使用限制</div>
+      <div class="alert hintline" style="margin-bottom:0"><span>ⓘ</span><div class="grow">${s.license}</div></div>
+      <div class="section-t">口径说明</div>
+      <div class="codebox">${s.note}</div>
+      <div class="section-t">依赖标签（${deps.length}）</div>
+      ${deps.length?deps.map(t=>`<div class="snap"><div class="grow"><b style="font-size:11.5px">${t.name}</b><div class="mono">${t.code} · ${t.version}</div></div><span class="badge b-${tagState(t)}">${STATUS[tagState(t)]}</span></div>`).join(''):'<div class="muted">暂无标签引用该来源。</div>'}
+      ${s.status!=='registered'?`<div class="alert" style="margin-top:14px"><span>▲</span><div class="grow">该来源尚未通过域登记审批，依赖标签不可正式使用。</div></div>`:''}
+    </div>`, 'source');
+}
+
+function openSnapshot(id){
+  const s = state.snapshots.find(x=>x.id===id); if(!s) return;
+  openDrawer(`
+    <div class="drawer-head"><div><div class="eyebrow">SEGMENT SNAPSHOT</div><h2>${s.name}</h2><div class="code">${s.id} · ${SUBJECTS[s.subject]}</div></div><button class="icon-btn" data-act="close-drawer">×</button></div>
+    <div class="drawer-body">
+      <div class="kv"><span>命中人数</span><b>${fmt(s.size)}</b></div>
+      <div class="kv"><span>生成时间</span><b>${s.time}</b></div>
+      <div class="kv"><span>有效期至</span><b>${s.expire}</b></div>
+      <div class="kv"><span>状态</span><b>已冻结 · 不随标签变化</b></div>
+      <div class="section-t">冻结表达式</div>
+      <div class="codebox">${esc(s.expr)}</div>
+      <div class="section-t">标签版本快照</div>
+      <div class="codebox">${Object.entries(s.tagVersions||{}).map(([k,v])=>`${k}  ${v}`).join('\n')||'—'}</div>
+      <div class="alert hintline" style="margin-top:14px"><span>ⓘ</span><div class="grow">快照不替代发送时的退订与合规检查；触达前仍需实时校验触达资格。</div></div>
+      <button class="btn primary" style="margin-top:14px" data-act="snap-export" data-id="${s.id}" ${s.subject==='member'?'disabled':''}>申请导出该快照</button>
+    </div>`, 'snapshot');
+}
+
+function openApproval(id){
+  const a = approvals.find(x=>x.id===id); if(!a) return;
+  openDrawer(`
+    <div class="drawer-head"><div><div class="eyebrow">APPROVAL · ${a.risk}风险</div><h2>${a.type}</h2><div class="code">${a.id}</div></div><button class="icon-btn" data-act="close-drawer">×</button></div>
+    <div class="drawer-body">
+      <div class="kv"><span>审批对象</span><b>${a.target}</b></div>
+      <div class="kv"><span>申请人</span><b>${a.applicant}</b></div>
+      <div class="kv"><span>提交时间</span><b>${a.time}</b></div>
+      <div class="kv"><span>风险等级</span><b>${a.risk}</b></div>
+      <div class="section-t">申请理由</div>
+      <div class="codebox">${esc(a.reason)}</div>
+      <div class="section-t">通过后的影响</div>
+      <div class="alert hintline" style="margin-bottom:0"><span>ⓘ</span><div class="grow">${approvalImpact(a)}</div></div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn primary" data-act="approve" data-id="${a.id}">通过并生效</button>
+        <button class="btn danger" data-act="reject" data-id="${a.id}">驳回</button>
+      </div>
+    </div>`, 'approval');
+}
+
+function approvalImpact(a){
+  switch(a.refType){
+    case 'tag_publish': return '标签状态由草稿变为生效中，版本号保留，写入发布审计。';
+    case 'tag_change': return '生成新版本并生效，旧版本归档；运行中任务继续使用旧版本。';
+    case 'export': return '生成带水印导出文件，记录操作人、用途、条数与 IP，文件保留 30 天。';
+    case 'manual_import': return '人工标签批量写入，必须带有效期；到期自动失效。';
+    case 'source_register': return '数据源转为已登记，依赖标签仍各自受状态与有效期约束。';
+    case 'usage_grant': return '用途白名单增加申请域/主体；个人兴趣仍受个性化开关限制。';
+    case 'deletion': return '进入删除执行，清理标签结果、派生画像、快照引用与模型特征，并写审计回执。';
+    default: return '审批结果会更新关联对象并写入审计。';
+  }
+}
+
+function openDeletion(id){
+  const d = deletionRequests.find(x=>x.id===id); if(!d) return;
+  const pct = d.status==='completed'?100:d.status==='running'?(d.progress||0):0;
+  openDrawer(`
+    <div class="drawer-head"><div><div class="eyebrow">ERASURE REQUEST</div><h2>${d.subjectName} · ${d.subjectId}</h2><div class="code">${d.id}</div></div><button class="icon-btn" data-act="close-drawer">×</button></div>
+    <div class="drawer-body">
+      <div style="display:flex;gap:6px;margin-bottom:14px"><span class="badge ${d.status==='completed'?'b-active':d.status==='running'?'b-running':'b-pending'}">${{pending:'待审批',approved:'已批准',running:'执行中',completed:'已完成'}[d.status]||d.status}</span></div>
+      <div class="kv"><span>清理范围</span><b>${d.scope.join('、')}</b></div>
+      <div class="kv"><span>提交时间</span><b>${d.submitted}</b></div>
+      <div class="kv"><span>完成时间</span><b>${d.completed||'—'}</b></div>
+      <div class="kv"><span>审批人</span><b>${d.approvedBy||'待审批'}</b></div>
+      <div class="section-t">执行进度</div>
+      <div class="bar lg"><i style="width:${pct}%"></i></div>
+      <div class="hint">${pct}% ${d.status==='pending'?'· 审批通过后开始执行':''}</div>
+      ${d.result?`
+        <div class="section-t">删除回执</div>
+        <div class="stats" style="grid-template-columns:1fr 1fr;margin-bottom:0">
+          <div class="stat"><span>标签结果</span><b>${d.result.tags}</b><small>条已删除</small></div>
+          <div class="stat"><span>派生画像</span><b>${d.result.profile}</b><small>项已清理</small></div>
+          <div class="stat"><span>快照引用</span><b>${d.result.snapshots}</b><small>处已解除</small></div>
+          <div class="stat"><span>模型特征</span><b>${d.result.features}</b><small>条已删除</small></div>
+        </div>
+        <div class="alert ok" style="margin-top:12px"><span>✓</span><div class="grow">删除完成。审计仅保留操作元数据，不保留完整敏感个人值。</div></div>`:''}
+      ${d.status==='pending'?`<div class="alert" style="margin-top:14px"><span>▲</span><div class="grow">该申请需要在审批中心通过后才会执行。</div></div><button class="btn primary" data-act="nav" data-id="approvals">前往审批中心</button>`:''}
+    </div>`, 'deletion');
+}
+
+function openAudit(id){
+  const a = audits.find(x=>x.id===id); if(!a) return;
+  openDrawer(`
+    <div class="drawer-head"><div><div class="eyebrow">AUDIT RECORD</div><h2>${a.action}</h2><div class="code">${a.id}</div></div><button class="icon-btn" data-act="close-drawer">×</button></div>
+    <div class="drawer-body">
+      <div class="kv"><span>操作人</span><b>${a.actor}</b></div>
+      <div class="kv"><span>对象</span><b class="mono">${a.target}</b></div>
+      <div class="kv"><span>标签</span><b class="mono">${a.tag}</b></div>
+      <div class="kv"><span>条数</span><b>${typeof a.rows==='number'?fmt(a.rows):a.rows}</b></div>
+      <div class="kv"><span>用途</span><b>${a.purpose}</b></div>
+      <div class="kv"><span>IP</span><b class="mono">${a.ip}</b></div>
+      <div class="kv"><span>时间</span><b>${a.time}</b></div>
+      <div class="section-t">最小化元数据</div>
+      <div class="codebox">${esc(a.meta)}
+<span class="cm">// 审计不保存完整敏感个人值；如需复现，凭申请单回查</span></div>
+      <div class="alert hintline" style="margin-top:14px"><span>ⓘ</span><div class="grow">审计记录只追加，不可修改或删除；保留 180 天。</div></div>
+    </div>`, 'audit');
+}
+
+/* =========================================================
+   弹窗内容
+   ========================================================= */
+function modalNewTag(){
+  openModal(`
+    <div class="modal-head"><h3>新建标签</h3><p>编码发布后不可修改；口径、来源与用途必须填写完整。</p></div>
+    <div class="modal-body">
+      <div class="two-col">
+        <div class="form-row"><label>标签名称</label><input class="input" id="ntName" placeholder="如：新手引导完成"/></div>
+        <div class="form-row"><label>所属主体</label><select class="select" id="ntSubject">
+          <option value="user" ${state.subject==='user'?'selected':''}>用户</option>
+          <option value="tenant" ${state.subject==='tenant'?'selected':''}>租户</option>
+          <option value="member" ${state.subject==='member'?'selected':''}>成员（必须绑定租户）</option>
+        </select></div>
+      </div>
+      <div class="form-row"><label>标签编码</label><input class="input mono" id="ntCode" placeholder="user.creation.onboarding_completed"/><div class="hint">小写点号分隔，格式 {主体}.{域}.{属性}；域限定于 profile / usage / creation / billing / lifecycle / service / risk / health。</div></div>
+      <div class="three-col">
+        <div class="form-row"><label>分层</label><select class="select" id="ntLayer">
+          <option value="fact">事实标签</option><option value="metric">统计标签</option><option value="rule" selected>规则标签</option><option value="model">模型标签</option><option value="manual">人工标签</option>
+        </select></div>
+        <div class="form-row"><label>更新频率</label><select class="select" id="ntFreq"><option>实时</option><option>小时</option><option selected>T+1</option><option>周</option></select></div>
+        <div class="form-row"><label>有效期（人工标签必填）</label><input class="input" id="ntValid" placeholder="2026-12-31"/></div>
+      </div>
+      <div class="form-row"><label>数据来源</label><select class="select" id="ntSource">
+        ${sources.map(s=>`<option value="${s.id}" ${s.status!=='registered'?'disabled':''}>${s.name} · ${s.id}${s.status!=='registered'?'（未登记）':''}</option>`).join('')}
+      </select><div class="hint">仅可选择已登记来源；听歌域需先完成域登记审批。</div></div>
+      <div class="form-row"><label>业务口径 <span class="muted">必填，至少 10 字</span></label><textarea id="ntDef" placeholder="说明判定条件、边界与不适用场景，例如：完成引导中的首个模板生成即置为 true，失败不计入。"></textarea></div>
+      <div class="form-row"><label>预期用途（可多选）</label>
+        <div class="check-grid">
+          ${PURPOSES.map(p=>`<label class="check"><input type="checkbox" class="ntPurpose" value="${p.id}" ${p.id==='ops_touch'?'checked':''}/><span>${p.name}<br/><span class="muted" style="font-size:9.5px">${p.desc}</span></span></label>`).join('')}
+        </div>
+      </div>
+      <label class="check" style="margin-bottom:8px"><input type="checkbox" id="ntSens"/><span>标记为敏感标签<br/><span class="muted" style="font-size:9.5px">读取需申请，导出需二次审批，并进入访问审计</span></span></label>
+      <label class="check"><input type="checkbox" id="ntAuth"/><span>这是权威事实标签<br/><span class="muted" style="font-size:9.5px">权威事实只读，禁止人工或模型覆盖</span></span></label>
+      <div class="err-line" id="ntErr"></div>
+    </div>
+    <div class="modal-foot"><button class="btn" data-act="close-modal">取消</button><button class="btn primary" data-act="create-tag">创建草稿并试算</button></div>`, true);
+}
+
+function modalNewVersion(code){
+  openModal(`
+    <div class="modal-head"><h3>创建新版本</h3><p>${code}</p></div>
+    <div class="modal-body">
+      <div class="form-row"><label>变更说明 <span class="muted">必填</span></label><textarea id="verReason" placeholder="如：潜力创作者门槛从 5 个作品调整为 8 个，并补充边界说明"></textarea></div>
+      <div class="hint">新版本需经试算与审批后生效；旧版本归档保留，运行中任务继续使用旧版本。</div>
+      <div class="err-line" id="verErr"></div>
+    </div>
+    <div class="modal-foot"><button class="btn" data-act="close-modal">取消</button><button class="btn primary" data-act="create-version" data-id="${code}">提交审批</button></div>`);
+}
+
+function modalAddCond(){
+  const opts = tags.filter(t=>t.subject===state.subject && t.status==='active' && !isExpired(t) && t.domain!=='listening');
+  const all = tags.filter(t=>t.subject===state.subject);
+  openModal(`
+    <div class="modal-head"><h3>添加圈选条件</h3><p>仅支持已登记字段与白名单算子。</p></div>
+    <div class="modal-body">
+      <div class="form-row"><label>标签 / 字段</label>
+        <select class="select" id="segTag">
+          ${opts.map(t=>`<option value="${t.code}">${t.name} · ${t.code}</option>`).join('')}
+          ${all.filter(t=>!opts.includes(t)).map(t=>`<option value="${t.code}" disabled>${t.name} · ${t.code}（${isExpired(t)?'已过期':STATUS[t.status]}）</option>`).join('')}
+        </select>
+      </div>
+      <div class="two-col">
+        <div class="form-row"><label>算子</label><select class="select" id="segOp"><option>=</option><option>≠</option><option>≥</option><option>≤</option><option>in</option><option>not in</option><option>within</option></select></div>
+        <div class="form-row"><label>值</label><input class="input" id="segVal" placeholder="如：3 或 new"/></div>
+      </div>
+      <div class="hint">添加后需重新估算；估算结果不写入标签，也不产生快照。</div>
+      <div class="err-line" id="segErr"></div>
+    </div>
+    <div class="modal-foot"><button class="btn" data-act="close-modal">取消</button><button class="btn primary" data-act="seg-add-confirm">添加条件</button></div>`, true);
+}
+
+function modalSnapshot(){
+  const p = segProblems().filter(x=>x.issue);
+  const name = state.seg.scenario || '自定义圈选';
+  openModal(`
+    <div class="modal-head"><h3>生成人群快照</h3><p>快照冻结条件、标签版本与人数，有效期 7 天。</p></div>
+    <div class="modal-body">
+      ${p.length?`<div class="alert bad"><span>▲</span><div class="grow">存在 ${p.length} 个不可用条件，无法生成快照。</div></div>`:''}
+      <div class="form-row"><label>快照名称</label><input class="input" id="snapName" value="${esc(name)}"/></div>
+      <div class="form-row"><label>冻结表达式</label><div class="codebox">${esc(exprOf(state.seg))}</div></div>
+      <div class="kv"><span>当前估算</span><b>${state.seg.estimate==null?'尚未估算':fmt(state.seg.estimate)+' 人'}</b></div>
+      <div class="hint">生成后条件再变化不会改写该快照；如需更新请重新生成。</div>
+      <div class="err-line" id="snapErr"></div>
+    </div>
+    <div class="modal-foot"><button class="btn" data-act="close-modal">取消</button><button class="btn primary" data-act="snap-confirm" ${p.length||state.seg.estimate==null?'disabled':''}>生成快照</button></div>`);
+}
+
+function modalExport(snapshotId){
+  const snap = snapshotId ? state.snapshots.find(s=>s.id===snapshotId) : null;
+  const size = snap ? snap.size : state.seg.estimate;
+  openModal(`
+    <div class="modal-head"><h3>导出人群名单</h3><p>导出属于高风险操作，需审批后生成带水印文件。</p></div>
+    <div class="modal-body">
+      <div class="alert orange"><span>▲</span><div class="grow">${snap?`快照 ${snap.id} · ${snap.name}`:`当前圈选估算`}，约 <b>${size==null?'未知':fmt(size)}</b> 人。导出将记录操作人、用途、条数与 IP。</div></div>
+      <div class="form-row"><label>导出用途 <span class="muted">必填</span></label><textarea id="expReason" placeholder="如：Q4 付费转化专项，仅用于站内信触达"></textarea></div>
+      <div class="two-col">
+        <div class="form-row"><label>字段范围</label><select class="select" id="expScope"><option>仅内部 ID（推荐）</option><option>内部 ID + 脱敏手机号</option></select></div>
+        <div class="form-row"><label>审批人</label><select class="select"><option>数据合规-周明</option><option>业务负责人-许澄</option></select></div>
+      </div>
+      <div class="hint">手机号默认脱敏；明文导出需单独申请，且仅限安全环境。</div>
+      <div class="err-line" id="expErr"></div>
+    </div>
+    <div class="modal-foot"><button class="btn" data-act="close-modal">取消</button><button class="btn primary" data-act="export-confirm" ${size==null?'disabled':''}>提交审批</button></div>`, true);
+}
+
+function modalReveal(code){
+  openModal(`
+    <div class="modal-head"><h3>申请查看敏感标签</h3><p>${code}</p></div>
+    <div class="modal-body">
+      <div class="alert"><span>●</span><div class="grow">敏感标签读取会写入访问审计，包含操作人、用途、时间与 IP。请仅用于明确业务目的。</div></div>
+      <div class="form-row"><label>用途 <span class="muted">必填</span></label><select class="select" id="revealReason"><option>客诉核查</option><option>风控复核</option><option>客户成功回访</option><option>合规调查</option></select></div>
+      <div class="hint">单次授权仅对当前客户有效，有效期 30 分钟。</div>
+    </div>
+    <div class="modal-foot"><button class="btn" data-act="close-modal">取消</button><button class="btn primary" data-act="confirm-reveal" data-id="${code}">确认查看</button></div>`);
+}
+
+function modalReject(id){
+  openModal(`
+    <div class="modal-head"><h3>驳回申请</h3><p>驳回理由将同步给申请人，并进入审计记录。</p></div>
+    <div class="modal-body">
+      <div class="form-row"><label>驳回理由 <span class="muted">必填</span></label><textarea id="rejReason" placeholder="如：口径未说明判定边界，命中率偏差超过阈值"></textarea></div>
+      <div class="hint">敏感标签与口径变更被驳回后，不得在 24 小时内重复提交相同内容。</div>
+      <div class="err-line" id="rejErr"></div>
+    </div>
+    <div class="modal-foot"><button class="btn" data-act="close-modal">取消</button><button class="btn danger" data-act="confirm-reject" data-id="${id}">确认驳回</button></div>`);
+}
+
+function modalSource(){
+  openModal(`
+    <div class="modal-head"><h3>登记数据源</h3><p>新域（如 listening）必须先登记并通过审批，依赖标签才可正式使用。</p></div>
+    <div class="modal-body">
+      <div class="two-col">
+        <div class="form-row"><label>来源 ID</label><input class="input mono" id="srcId" placeholder="events.playback_completed"/></div>
+        <div class="form-row"><label>来源名称</label><input class="input" id="srcName" placeholder="播放完成事件"/></div>
+      </div>
+      <div class="two-col">
+        <div class="form-row"><label>主体</label><select class="select" id="srcSubject"><option value="user">用户</option><option value="tenant">租户</option><option value="member">成员</option></select></div>
+        <div class="form-row"><label>域</label><select class="select" id="srcDomain">
+          ${Object.entries(DOMAINS).map(([k,v])=>`<option value="${k}">${v}${ALLOWED_DOMAINS.includes(k)?'':'（新域，需审批）'}</option>`).join('')}
+        </select></div>
+      </div>
+      <div class="form-row"><label>表 / 事件与字段</label><input class="input mono" id="srcTable" placeholder="playback.completed · user_id, track_id, play_seconds"/></div>
+      <div class="form-row"><label>口径与合规说明 <span class="muted">必填</span></label><textarea id="srcNote" placeholder="说明有效播放判定、采集链路、脱敏方式与不可用途"></textarea></div>
+      <div class="err-line" id="srcErr"></div>
+    </div>
+    <div class="modal-foot"><button class="btn" data-act="close-modal">取消</button><button class="btn primary" data-act="source-confirm">提交域登记审批</button></div>`, true);
+}
+
+function modalAuthRequest(purpose){
+  const p = PURPOSES.find(x=>x.id===purpose) || PURPOSES[0];
+  openModal(`
+    <div class="modal-head"><h3>申请用途扩围</h3><p>${p.name}</p></div>
+    <div class="modal-body">
+      <div class="kv"><span>当前范围</span><b>${p.domains.map(d=>DOMAINS[d]).join(' / ')}</b></div>
+      <div class="form-row"><label>申请加入的域</label><select class="select" id="authDomain">
+        ${Object.entries(DOMAINS).filter(([k])=>!p.domains.includes(k)).map(([k,v])=>`<option value="${k}">${v}${ALLOWED_DOMAINS.includes(k)?'':'（新域，需先登记）'}</option>`).join('')||'<option value="">无可申请域</option>'}
+      </select></div>
+      <div class="form-row"><label>申请理由 <span class="muted">必填</span></label><textarea id="authReason" placeholder="说明业务场景、数据最小化与隐私影响评估"></textarea></div>
+      <div class="alert" style="margin-bottom:0"><span>▲</span><div class="grow">付费、风险、健康属性在任何情况下不得加入音乐推荐排序。</div></div>
+      <div class="err-line" id="authErr"></div>
+    </div>
+    <div class="modal-foot"><button class="btn" data-act="close-modal">取消</button><button class="btn primary" data-act="auth-confirm" data-id="${p.id}">提交审批</button></div>`);
+}
+
+function modalDeletion(){
+  const subjects = Object.keys(customers).filter(k=>!customers[k].removed && !deletionRequests.some(d=>d.subjectId===k && d.status!=='completed'));
+  openModal(`
+    <div class="modal-head"><h3>提交删除申请</h3><p>删除覆盖派生数据，审批通过后执行。</p></div>
+    <div class="modal-body">
+      <div class="two-col">
+        <div class="form-row"><label>适用主体</label><select class="select" id="delSubject">
+          ${subjects.map(k=>`<option value="${k}">${customers[k].name} · ${customers[k].id} · ${SUBJECTS[customers[k].subject]}</option>`).join('')}
+        </select></div>
+        <div class="form-row"><label>删除原因</label><select class="select" id="delReason"><option>用户主动注销</option><option>用户行使删除权</option><option>合规要求</option></select></div>
+      </div>
+      <div class="form-row"><label>清理范围</label>
+        <div class="check-grid">
+          ${['标签结果','派生画像缓存','人群快照引用','模型特征','推荐序列特征'].map((s,i)=>`<label class="check"><input type="checkbox" class="delScope" value="${s}" ${i<4?'checked':''}/><span>${s}</span></label>`).join('')}
+        </div>
+      </div>
+      <div class="alert" style="margin-bottom:0"><span>▲</span><div class="grow">删除不会清除对账所需的交易事实与审计元数据；审计不保留完整敏感个人值。</div></div>
+      <div class="err-line" id="delErr"></div>
+    </div>
+    <div class="modal-foot"><button class="btn" data-act="close-modal">取消</button><button class="btn primary" data-act="del-confirm">提交审批</button></div>`, true);
+}
+
+function modalHelp(){
+  openModal(`
+    <div class="modal-head"><h3>业务边界与演示说明</h3><p>本原型与推荐系统架构的最新约束保持一致</p></div>
+    <div class="modal-body" style="font-size:11.5px;color:var(--text3);line-height:1.9">
+      <b style="color:var(--text2)">1. 主体隔离</b><br/>user / tenant / member 分开归属，member 必须带 tenant_id；切换主体后资产、画像、圈选同步过滤。<br/>
+      <b style="color:var(--text2)">2. 事实与推断分离</b><br/>权威事实只读，不允许人工或模型覆盖；模型标签带置信度；人工标签必须有有效期。<br/>
+      <b style="color:var(--text2)">3. 创作 ≠ 听歌</b><br/>创作偏好不能推导听歌兴趣；listening 域须先完成来源登记审批。<br/>
+      <b style="color:var(--text2)">4. 用途白名单</b><br/>付费、风险、健康属性不参与音乐排序；关闭个性化后个人兴趣与序列停止投影。<br/>
+      <b style="color:var(--text2)">5. 过期与失败</b><br/>过期标签、计算失败标签不可正式使用；快照冻结条件与版本，不替代发送时退订检查。<br/>
+      <b style="color:var(--text2)">6. 删除与审计</b><br/>删除覆盖派生数据；审计只追加、最小化，不保留完整敏感个人值。<br/>
+      <div class="alert hintline" style="margin-top:14px;margin-bottom:0"><span>ⓘ</span><div class="grow">演示环境：所有数据、任务、审批和导出均为本地模拟，不连接真实后端，也不代表生产安全控制已落地。</div></div>
+    </div>
+    <div class="modal-foot"><button class="btn primary" data-act="close-modal">知道了</button></div>`, true);
+}
+
+/* =========================================================
+   业务动作
+   ========================================================= */
+function logAudit(entry){
+  audits.unshift(Object.assign({
+    id:'au_' + (5600 + audits.length),
+    actor:'林岚', ip:'10.24.6.12', time:nowLabel(), rows:'—', purpose:'—', meta:''
+  }, entry));
+}
+
+function approveEffect(a){
+  if(a.refType==='tag_publish' || a.refType==='tag_change'){
+    const t = tagByCode(a.refCode);
+    if(t){
+      if(a.refType==='tag_change') t.version = bumpVersion(t.version);
+      t.status = 'active';
+      t.lastUpdated = nowLabel();
+      logAudit({action:'发布标签', target:`${t.code} ${t.version}`, tag:t.code, purpose:a.id, meta:`审批单 ${a.id}；状态 ${STATUS[t.status]}`});
+    }
+  }else if(a.refType==='source_register'){
+    const s = srcById(a.refCode);
+    if(s){ s.status='registered'; s.lastCheck=nowLabel(); logAudit({action:'域登记通过', target:s.id, tag:'—', purpose:a.id, meta:`域 ${DOMAINS[s.domain]} 登记完成`}); }
+  }else if(a.refType==='usage_grant'){
+    const p = PURPOSES.find(x=>x.id===a.refCode);
+    if(p && a.refDomain && !p.domains.includes(a.refDomain)) p.domains.push(a.refDomain);
+    const az = authz.find(x=>x.purpose===a.refCode);
+    if(az && a.refDomain && !az.scope.includes(DOMAINS[a.refDomain])) az.scope = az.scope + ' / ' + DOMAINS[a.refDomain];
+    logAudit({action:'用途扩围审批', target:a.refCode, tag:'—', purpose:a.id, meta:`新增域：${a.refDomain?DOMAINS[a.refDomain]:'—'}；用途白名单已更新`});
+  }else if(a.refType==='export'){
+    logAudit({action:'导出人群包', target:a.target, tag:'多标签组合', rows:15000, purpose:'审批通过后导出', meta:`审批单 ${a.id}`});
+  }else if(a.refType==='manual_import'){
+    const t = tagByCode(a.refCode);
+    if(t) t.lastUpdated = nowLabel();
+    logAudit({action:'导入人工标签', target:a.target, tag:a.refCode, rows:312, purpose:'客服补偿', meta:`审批单 ${a.id}；有效期 2026-12-31`});
+  }else if(a.refType==='deletion'){
+    startDeletion(a.refId);
+  }
+  approvalHistory.unshift({id:a.id, type:a.type, target:a.target, result:'通过', actor:'数据合规-周明', time:nowLabel(), note:'审批通过，关联对象已更新'});
+}
+
+function rejectEffect(a, reason){
+  if((a.refType==='tag_publish'||a.refType==='tag_change') && a.refCode){
+    const t = tagByCode(a.refCode);
+    if(t && t.status==='pending') t.status = 'draft';
+  }
+  approvalHistory.unshift({id:a.id, type:a.type, target:a.target, result:'驳回', actor:'数据合规-周明', time:nowLabel(), note:reason});
+  logAudit({action:'审批驳回', target:a.target, tag:a.refCode||'—', purpose:a.id, meta:reason});
+}
+
+function startDeletion(id){
+  const d = deletionRequests.find(x=>x.id===id);
+  if(!d) return;
+  d.status = 'running'; d.progress = 8; d.approvedBy = '数据合规-周明';
+  render();
+  const iv = setInterval(()=>{
+    d.progress = Math.min(100, (d.progress||0) + 18);
+    if(d.progress >= 100){
+      clearInterval(iv);
+      d.status = 'completed';
+      d.completed = nowLabel();
+      d.result = { tags:18, profile:6, snapshots:2, features:4 };
+      const c = customers[d.subjectId];
+      if(c){ c.removed = true; c.vals = {}; c.badges = [['b-archived','派生数据已删除']]; }
+      logAudit({action:'删除派生数据', target:`${d.subjectName} · ${d.subjectId}`, tag:'—', rows:18, purpose:d.id, meta:'已清理标签结果 / 派生画像 / 快照引用 / 模型特征'});
+      toast('删除完成，回执已写入审计');
+    }
+    if(state.view==='privacy') render();
+    if(state.drawer==='deletion' && $('#mask').classList.contains('open')) openDeletion(id);
+  }, 700);
+}
+
+/* =========================================================
+   事件绑定
+   ========================================================= */
+document.addEventListener('click', async e=>{
+  const el = e.target.closest('[data-act]');
+  if(!el){
+    if(e.target.id==='mask') closeDrawer();
+    if(e.target.classList.contains('modal-root')) closeModal();
+    return;
+  }
+  const act = el.dataset.act, id = el.dataset.id;
+
+  if(act==='nav'){
+    state.view = id; state.focus = null;
+    if(id==='segments') state.seg.scenario = state.seg.scenario || null;
+    render(); return;
+  }
+  if(act==='subject'){
+    if(state.subject===id){ render(); return; }
+    state.subject = id;
+    state.seg = { logic:'AND', conds:defaultConds(id), stale:false, estimate:null, estimating:false, tenant:'t_208', scenario:null };
+    state.customer = firstCustomerOf(id);
+    state.modalData = {};
+    render(); toast(`已切换主体：${SUBJECTS[id]}，圈选条件已重置`); return;
+  }
+  if(act==='reset-demo'){ resetDemo(); return; }
+  if(act==='help'){ modalHelp(); return; }
+  if(act==='close-modal'){ closeModal(); return; }
+  if(act==='close-drawer'){ closeDrawer(); return; }
+
+  /* ---- 标签 ---- */
+  if(act==='new-tag'){ modalNewTag(); return; }
+  if(act==='open-tag'){ openTag(id); return; }
+  if(act==='tag-tab'){ state.tagTab = id; openDrawer(drawerTag(), 'tag'); return; }
+
+  if(act==='create-tag'){
+    const name = ($('#ntName')||{}).value ? $('#ntName').value.trim() : '';
+    const code = ($('#ntCode')||{}).value ? $('#ntCode').value.trim().toLowerCase() : '';
+    const subject = $('#ntSubject').value;
+    const layer = $('#ntLayer').value;
+    const freq = $('#ntFreq').value;
+    const valid = ($('#ntValid')||{}).value ? $('#ntValid').value.trim() : '';
+    const source = $('#ntSource').value;
+    const def = $('#ntDef').value.trim();
+    const sens = $('#ntSens').checked;
+    const auth = $('#ntAuth').checked;
+    const purposes = Array.from(document.querySelectorAll('.ntPurpose:checked')).map(x=>x.value);
+    const err = message => { const box = $('#ntErr'); if(box) box.textContent = message; toast(message, true); };
+
+    if(name.length < 2) return err('请填写标签名称（至少 2 字）');
+    if(!/^[a-z][a-z0-9_]*(\.[a-z0-9_]+){2}$/.test(code)) return err('编码格式应为 {主体}.{域}.{属性}，全小写点号分隔');
+    if(!code.startsWith(subject + '.')) return err(`编码前缀必须与主体一致：${subject}.`);
+    const domain = code.split('.')[1];
+    if(!ALLOWED_DOMAINS.includes(domain) && domain !== 'listening') return err('域不在允许范围：profile / usage / creation / billing / lifecycle / service / risk / health');
+    if(domain === 'listening') return err('听歌域需先在“来源与口径”完成登记审批，暂不能直接创建标签');
+    if(def.length < 10) return err('业务口径至少 10 个字，需说明判定条件与边界');
+    if(layer === 'manual' && !valid) return err('人工标签必须填写有效期');
+    if(!purposes.length) return err('至少选择一个预期用途');
+    if(sens && !purposes.length) return err('敏感标签必须限定用途');
+    if(subject === 'member' && !state.seg.tenant) return err('成员标签必须绑定租户');
+
+    const created = await api.createTag({ code, name, subject, layer, domain, values:'待定义', freq, status:'draft', owner:'林岚', sensitive:sens, source, definition:def, authoritative:auth, validUntil:valid, purposes });
+    tags.unshift(created);
+    closeModal();
+    state.subject = subject;
+    state.activeTag = code; state.tagTab='dryrun'; state.dryRun={status:'idle',progress:0};
+    state.view = 'catalog';
+    logAudit({action:'创建标签草稿', target:code, tag:code, purpose:purposes.join(', '), meta:`来源 ${source}；敏感 ${sens?'是':'否'}；权威事实 ${auth?'是':'否'}`});
+    render(); openTag(code);
+    toast('草稿已创建，请先试算再提交审批');
+    return;
+  }
+
+  if(act==='dry-run'){
+    const t = tagByCode(state.activeTag); if(!t) return;
+    state.dryRun = { status:'running', progress:0 };
+    openDrawer(drawerTag(), 'tag');
+    const iv = setInterval(async ()=>{
+      state.dryRun.progress = Math.min(96, state.dryRun.progress + 16);
+      const bar = document.getElementById('dryBar');
+      const pct = document.getElementById('dryPct');
+      if(bar) bar.style.width = state.dryRun.progress + '%';
+      if(pct) pct.textContent = state.dryRun.progress;
+      if(state.dryRun.progress >= 96){
+        clearInterval(iv);
+        const result = await api.dryRun(t.code);
+        t.dryResult = result;
+        state.dryRun = { status:'done', progress:100 };
+        if(state.drawer==='tag') openDrawer(drawerTag(), 'tag');
+        toast('试算完成，可提交发布审批');
+      }
+    }, 220);
+    return;
+  }
+
+  if(act==='publish'){
+    const t = tagByCode(id); if(!t) return;
+    if(!t.dryResult) return toast('请先完成试算', true);
+    const ap = { id:'ap_' + (9100 + approvals.length), type:'新标签发布', refType:'tag_publish', refCode:t.code, target:`${t.code} ${t.version}`, applicant:'林岚', risk:t.sensitive?'高':'中', reason:'试算通过，提交发布审批', time:nowLabel() };
+    approvals.unshift(ap);
+    t.status = 'pending';
+    closeDrawer(); render();
+    toast('已提交发布审批，等待合规确认');
+    return;
+  }
+
+  if(act==='new-version'){ modalNewVersion(id); return; }
+  if(act==='create-version'){
+    const reason = ($('#verReason')||{}).value ? $('#verReason').value.trim() : '';
+    if(reason.length < 6){ const b=$('#verErr'); if(b) b.textContent='请填写至少 6 个字的变更说明'; return; }
+    const t = tagByCode(id); if(!t) return;
+    approvals.unshift({ id:'ap_'+(9100+approvals.length), type:'口径变更', refType:'tag_change', refCode:t.code, target:`${t.code} ${bumpVersion(t.version)}`, applicant:'林岚', risk:'中', reason, time:nowLabel() });
+    closeModal(); closeDrawer(); render();
+    toast('新版本草稿已提交审批');
+    return;
+  }
+
+  if(act==='tag-recompute'){
+    const t = tagByCode(id);
+    jobs.unshift({ id:'job_'+Date.now().toString().slice(-6), tag:id, ver:t?t.version:'v1', mode:'full', window:'2026-11-19', status:'queued', progress:0, shards:'待调度', duration:'—', err:'' });
+    closeDrawer(); state.view='jobs'; render();
+    toast('已触发全量重算，任务进入队列');
+    return;
+  }
+
+  /* ---- 来源 ---- */
+  if(act==='source-detail'){ openSource(id); return; }
+  if(act==='source-new'){ modalSource(); return; }
+  if(act==='source-confirm'){
+    const sid = ($('#srcId')||{}).value ? $('#srcId').value.trim() : '';
+    const name = ($('#srcName')||{}).value ? $('#srcName').value.trim() : '';
+    const table = ($('#srcTable')||{}).value ? $('#srcTable').value.trim() : '';
+    const note = ($('#srcNote')||{}).value ? $('#srcNote').value.trim() : '';
+    const subject = $('#srcSubject').value, domain = $('#srcDomain').value;
+    if(!sid || !name || !table || note.length < 10){
+      const b = $('#srcErr'); if(b) b.textContent = '请完整填写来源 ID、名称、表/事件与口径说明（至少 10 字）';
+      return;
+    }
+    const dupe = sources.some(s=>s.id===sid);
+    if(dupe){ const b= $('#srcErr'); if(b) b.textContent='来源 ID 已存在'; return; }
+    sources.unshift({ id:sid, name, system:'待补充', table, subject, domain, fields:'待登记', quality:'—', status:'pending', owner:'林岚', latency:'待核验', license:'新域需完成合规评估', note, lastCheck:'—' });
+    approvals.unshift({ id:'ap_'+(9100+approvals.length), type:'域登记', refType:'source_register', refCode:sid, target:`${sid} · ${domain} 域`, applicant:'林岚', risk:ALLOWED_DOMAINS.includes(domain)?'中':'高', reason:note, time:nowLabel() });
+    closeModal(); state.view='sources'; render();
+    toast('域登记已提交审批');
+    return;
+  }
+
+  /* ---- 360 ---- */
+  if(act==='reveal'){ modalReveal(id); return; }
+  if(act==='confirm-reveal'){
+    const reason = $('#revealReason').value;
+    state.modalData['reveal_'+id] = true;
+    logAudit({action:'查看敏感标签', target:`${customers[state.customer].name} / ${customers[state.customer].id}`, tag:id, rows:1, purpose:reason, meta:'单次授权 30 分钟；仅展示布尔/区间结果'});
+    closeModal(); render();
+    toast('已授权查看 30 分钟，本次访问已记录审计');
+    return;
+  }
+
+  /* ---- 圈选 ---- */
+  if(act==='open-seg'){
+    const s = scenarios.find(x=>x.id===id); if(!s) return;
+    if(s.subject !== state.subject){
+      state.subject = s.subject;
+      state.customer = firstCustomerOf(s.subject);
+    }
+    state.seg = { logic:'AND', conds:s.conds.map(c=>({...c})), stale:false, estimate:null, estimating:false, tenant:'t_208', scenario:s.name };
+    state.view='segments';
+    render();
+    const blocked = s.conds.map(c=>tagIssue(tagByCode(c.code), {tenant:state.seg.tenant})).filter(Boolean);
+    if(blocked.length) toast('已载入条件，但存在不可用标签：' + blocked[0], true);
+    else toast('已载入场景条件，请重新估算');
+    return;
+  }
+  if(act==='seg-add'){
+    if(state.seg.conds.length >= 8) return toast('最多 8 个条件', true);
+    modalAddCond(); return;
+  }
+  if(act==='seg-add-confirm'){
+    const code = $('#segTag').value, op = $('#segOp').value, value = ($('#segVal').value || '').trim();
+    if(!value){ const b=$('#segErr'); if(b) b.textContent='请填写条件值'; return; }
+    const issue = tagIssue(tagByCode(code), {tenant:state.seg.tenant});
+    if(issue){ const b=$('#segErr'); if(b) b.textContent='该标签不可用：'+issue; return; }
+    state.seg.conds.push({code, op, value});
+    state.seg.stale = true; state.seg.estimate = null; state.seg.scenario = null;
+    closeModal(); render(); toast('条件已添加，请重新估算');
+    return;
+  }
+  if(act==='seg-remove'){
+    state.seg.conds.splice(Number(id),1);
+    state.seg.stale = true; state.seg.estimate = null;
+    render(); return;
+  }
+  if(act==='seg-logic'){ state.seg.logic = id; state.seg.stale = true; state.seg.estimate = null; render(); return; }
+  if(act==='seg-estimate'){
+    const problems = segProblems().filter(x=>x.issue);
+    if(problems.length) return toast('存在不可用条件，无法估算', true);
+    state.seg.estimating = true; render();
+    const value = await api.estimate();
+    state.seg.estimating = false; state.seg.estimate = value; state.seg.stale = false;
+    render(); toast('估算完成，±3% 误差');
+    return;
+  }
+  if(act==='seg-snapshot'){ modalSnapshot(); return; }
+  if(act==='snap-confirm'){
+    const name = ($('#snapName')||{}).value ? $('#snapName').value.trim() : '';
+    if(!name){ const b=$('#snapErr'); if(b) b.textContent='请填写快照名称'; return; }
+    const snap = {
+      id:'snap_' + (1182 + state.snapshots.length), name, subject:state.subject,
+      size:state.seg.estimate, time:nowLabel(),
+      expire:(()=>{ const d=new Date(); d.setDate(d.getDate()+7); return `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })(),
+      expr:exprOf(state.seg), conds:state.seg.conds.map(c=>({...c})),
+      tagVersions:state.seg.conds.reduce((m,c)=>{ const t=tagByCode(c.code); m[c.code]=t?t.version:'—'; return m; },{})
+    };
+    state.snapshots.unshift(snap);
+    state.seg.scenario = name;
+    closeModal(); render();
+    toast(`快照已生成：${fmt(snap.size)} 人，触达请引用 ${snap.id}`);
+    return;
+  }
+  if(act==='snap-detail'){ openSnapshot(id); return; }
+  if(act==='snap-export'){ closeDrawer(); modalExport(id); return; }
+  if(act==='seg-export'){
+    if(state.seg.estimate == null) return toast('请先估算或选择快照', true);
+    modalExport(); return;
+  }
+  if(act==='export-confirm'){
+    const reason = ($('#expReason')||{}).value ? $('#expReason').value.trim() : '';
+    if(reason.length < 5){ const b=$('#expErr'); if(b) b.textContent='请填写至少 5 个字的导出用途'; return; }
+    approvals.unshift({ id:'ap_'+(9100+approvals.length), type:'敏感标签导出', refType:'export', refCode:'current_segment', target:`当前圈选 · ${fmt(state.seg.estimate||0)} 条`, applicant:'林岚', risk:'高', reason, time:nowLabel() });
+    closeModal(); render();
+    toast('导出申请已提交审批，审批后生成带水印文件');
+    return;
+  }
+
+  /* ---- 任务 ---- */
+  if(act==='job-detail'){ openJob(id); return; }
+  if(act==='job-retry'){
+    const j = jobs.find(x=>x.id===id);
+    if(j){ j.status='queued'; j.err=''; j.progress=0; j.shards='待调度'; j.duration='—'; }
+    render(); toast('任务已重新排队，按幂等键去重');
+    return;
+  }
+  if(act==='job-refresh'){
+    jobs.forEach(j=>{ if(j.status==='running'){ j.progress=Math.min(100,j.progress+9); if(j.progress>=100) j.status='succeeded'; } });
+    render(); toast('任务状态已刷新');
+    return;
+  }
+
+  /* ---- 用途 ---- */
+  if(act==='purpose-select'){ state.usage.purpose = id; state.usage.filter='all'; render(); return; }
+  if(act==='proj-filter'){ state.usage.filter = id; render(); return; }
+  if(act==='auth-request'){ modalAuthRequest(id); return; }
+  if(act==='auth-confirm'){
+    const purpose = id;
+    const domain = $('#authDomain').value;
+    const reason = ($('#authReason')||{}).value ? $('#authReason').value.trim() : '';
+    if(!domain) return toast('没有可申请的域', true);
+    if(reason.length < 8){ const b=$('#authErr'); if(b) b.textContent='请填写至少 8 个字的申请理由'; return; }
+    if(purpose==='music_rank' && MUSIC_RANK_FORBIDDEN.includes(domain)){ const b=$('#authErr'); if(b) b.textContent='付费 / 风险 / 健康属性禁止加入音乐推荐排序'; return; }
+    approvals.unshift({ id:'ap_'+(9100+approvals.length), type:'用途扩围', refType:'usage_grant', refCode:purpose, refDomain:domain, target:`${(PURPOSES.find(p=>p.id===purpose)||{}).name} · 申请加入 ${DOMAINS[domain]} 域`, applicant:'林岚', risk:'高', reason, time:nowLabel() });
+    closeModal(); render();
+    toast('用途扩围申请已提交审批');
+    return;
+  }
+
+  /* ---- 审批 ---- */
+  if(act==='ap-tab'){ state.apTab = id; render(); return; }
+  if(act==='approval-detail'){ openApproval(id); return; }
+  if(act==='approve'){
+    const a = approvals.find(x=>x.id===id); if(!a) return;
+    approvals = approvals.filter(x=>x.id!==id);
+    approveEffect(a);
+    closeDrawer(); render();
+    toast(`已通过：${a.type}，关联对象已更新并写入审计`);
+    return;
+  }
+  if(act==='reject'){ modalReject(id); return; }
+  if(act==='confirm-reject'){
+    const reason = ($('#rejReason')||{}).value ? $('#rejReason').value.trim() : '';
+    if(reason.length < 4){ const b=$('#rejErr'); if(b) b.textContent='请填写至少 4 个字的驳回理由'; return; }
+    const a = approvals.find(x=>x.id===id); if(!a) return;
+    approvals = approvals.filter(x=>x.id!==id);
+    rejectEffect(a, reason);
+    closeModal(); closeDrawer(); render();
+    toast('已驳回，理由已同步申请人');
+    return;
+  }
+
+  /* ---- 隐私 ---- */
+  if(act==='toggle-personalization'){
+    state.personalization = !state.personalization;
+    logAudit({action: state.personalization?'开启个性化':'关闭个性化', target:'当前租户设置', tag:'—', purpose:'用户设置同步', meta: state.personalization?'恢复个人兴趣与序列投影':'停止个人兴趣与序列投影；历史值保留'});
+    render();
+    toast(state.personalization?'已开启个性化，投影恢复':'已关闭个性化，个人兴趣投影已停止');
+    return;
+  }
+  if(act==='del-new'){ modalDeletion(); return; }
+  if(act==='del-confirm'){
+    const subjectId = $('#delSubject').value;
+    const reason = $('#delReason').value;
+    const scope = Array.from(document.querySelectorAll('.delScope:checked')).map(x=>x.value);
+    if(!scope.length){ const b=$('#delErr'); if(b) b.textContent='至少选择一个清理范围'; return; }
+    const c = customers[subjectId];
+    const req = { id:'dr_'+(2203+deletionRequests.length), subjectId, subjectName:c?c.name:subjectId, scope, status:'pending', submitted:nowLabel(), completed:'', result:null, approvedBy:'' };
+    deletionRequests.unshift(req);
+    approvals.unshift({ id:'ap_'+(9100+approvals.length), type:'删除申请', refType:'deletion', refId:req.id, refCode:subjectId, target:`${req.subjectName} · ${subjectId} · ${reason}`, applicant:'林岚', risk:'高', reason:`${reason}；范围：${scope.join('、')}`, time:nowLabel() });
+    closeModal(); state.view='privacy'; render();
+    toast('删除申请已提交审批，通过后执行清理');
+    return;
+  }
+  if(act==='del-detail'){ openDeletion(id); return; }
+
+  /* ---- 审计 ---- */
+  if(act==='audit-detail'){ openAudit(id); return; }
+  if(act==='audit-export'){
+    logAudit({action:'导出审计日志', target:'近 7 日审计', tag:'—', purpose:'合规归档', meta:'导出人 林岚；文件保留 180 天；不含完整敏感值'});
+    render(); toast('审计日志已导出（演示），操作本身已记录');
+    return;
+  }
+});
+
+document.addEventListener('input', e=>{
+  const k = e.target.dataset.input;
+  if(!k) return;
+  if(k==='q'){ state.q = e.target.value; state.focus='tagQ'; render(); }
+  if(k==='audit-q'){ state.audit.q = e.target.value; state.focus='auditQ'; render(); }
+});
+
+document.addEventListener('change', e=>{
+  const k = e.target.dataset.input;
+  if(!k) return;
+  if(k==='layer'){ state.layer = e.target.value; render(); }
+  if(k==='status'){ state.status = e.target.value; render(); }
+  if(k==='customer'){ state.customer = e.target.value; state.modalData={}; render(); }
+  if(k==='seg-tenant'){ state.seg.tenant = e.target.value; state.seg.estimate=null; state.seg.stale=true; render(); }
+  if(k==='audit-action'){ state.audit.action = e.target.value; render(); }
+});
+
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape'){ closeModal(); closeDrawer(); }
+});
+
+/* =========================================================
+   重置
+   ========================================================= */
+const SEED = JSON.parse(JSON.stringify({
+  tags, sources, jobs, approvals, approvalHistory, audits, authz, deletionRequests, snapshots
+}));
+
+function resetDemo(){
+  tags = JSON.parse(JSON.stringify(SEED.tags));
+  sources = JSON.parse(JSON.stringify(SEED.sources));
+  jobs = JSON.parse(JSON.stringify(SEED.jobs));
+  approvals = JSON.parse(JSON.stringify(SEED.approvals));
+  approvalHistory = JSON.parse(JSON.stringify(SEED.approvalHistory));
+  audits = JSON.parse(JSON.stringify(SEED.audits));
+  authz = JSON.parse(JSON.stringify(SEED.authz));
+  deletionRequests = JSON.parse(JSON.stringify(SEED.deletionRequests));
+  state.snapshots = JSON.parse(JSON.stringify(SEED.snapshots));
+  PURPOSE_SEED.forEach(p=>{ const cur = PURPOSES.find(x=>x.id===p.id); if(cur) cur.domains = p.domains.slice(); });
+  Object.keys(customers).forEach(k=>{
+    const base = CUSTOMER_SEED[k];
+    if(base){ customers[k] = JSON.parse(JSON.stringify(base)); }
+  });
+  state.subject='user'; state.view='overview'; state.customer='u_1024';
+  state.seg = { logic:'AND', conds:defaultConds('user'), stale:false, estimate:null, estimating:false, tenant:'t_208', scenario:null };
+  state.usage = { purpose:'music_rank', filter:'all' };
+  state.personalization = true; state.apTab='pending';
+  state.audit = { q:'', action:'all' };
+  state.modalData = {}; state.q=''; state.layer='all'; state.status='all';
+  closeDrawer(); closeModal(); render();
+  toast('演示数据已重置');
+}
+const CUSTOMER_SEED = JSON.parse(JSON.stringify(customers));
+const PURPOSE_SEED = PURPOSES.map(p=>({ id:p.id, domains:p.domains.slice() }));
+
+render();
+</script>
+</body>
+</html>

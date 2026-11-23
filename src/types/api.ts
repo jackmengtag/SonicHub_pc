@@ -275,6 +275,56 @@ export interface Page<T> extends Items<T> {
 
 export interface RecommendFeed extends Page<Work> {
   policy_version: string;
+  scene?: string;
+  personalization?: string;
+}
+
+export interface WorkTagCount {
+  tag: string;
+  count: number;
+}
+
+export interface GenreAffinity {
+  genre: string;
+  weight: number;
+}
+
+export interface UserTagAssignment {
+  tag_id: string;
+  code: string;
+  name: string;
+  category: string;
+  value_type: string;
+  value: string;
+  value_label: string;
+  confidence: number;
+  source: string;
+  is_sensitive: boolean;
+  valid_from: string;
+  expires_at?: string;
+  updated_at: string;
+}
+
+export interface MyTagsResult {
+  affinity: GenreAffinity[];
+  tags: UserTagAssignment[];
+  top_genre: string;
+}
+
+export interface RecommendEventInput {
+  event_id: string;
+  event_type: string;
+  work_id?: string;
+  scene?: string;
+  occurred_at?: string;
+  payload?: Record<string, unknown>;
+}
+
+export interface RecommendFeedbackRequest {
+  target_type: string;
+  target_id: string;
+  action: string;
+  request_id?: string;
 }
 
 export interface FollowingFeed extends Items<Work> {
@@ -336,10 +386,17 @@ export interface LimitQuery {
   limit?: number;
 }
 
+export interface RecommendFeedQuery extends PaginationQuery {
+  scene?: 'home' | 'fresh' | 'similar' | 'following' | string;
+  genre?: string;
+  seed?: string;
+}
+
 export interface WorksQuery extends PaginationQuery {
   owner?: string;
   status?: string;
   genre?: string;
+  tag?: string;
   sort?: string;
 }
 

@@ -4,6 +4,7 @@ import {
   collectWork,
   likeWork,
   recordWorkPlay,
+  trackRecommendEvents,
   uncollectWork,
   unlikeWork,
 } from '../api/modules';
@@ -27,6 +28,33 @@ export const usePlayerStore = defineStore('player', () => {
   let audio: HTMLAudioElement | null = null;
   let boundAudio: HTMLAudioElement | null = null;
 
+  /* ---------- 播放行为埋点（推荐系统事件契约） ---------- */
+  const PLAY_MILESTONES = [0.25, 0.5, 0.75];
+  let trackedWorkId = '';
+  const reportedMilestones = new Set<number>();
+
+  function eventID(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    return `evt-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  function trackPlay(type: string, work: Work | null, payload: Record<string, unknown>): void {
+    if (!work) return;
+    void trackRecommendEvents([{
+      event_id: eventID(),
+      event_type: type,
+      work_id: work.id,
+      scene: 'player',
+      occurred_at: new Date().toISOString(),
+      payload,
+    }]).catch(() => undefined);
+  }
+
+  function resetTrackState(): void {
+    trackedWorkId = '';
+    reportedMilestones.clear();
+  }
+
   const currentIndex = computed(() => current.value
     ? queue.value.findIndex((item) => item.id === current.value?.id)
     : -1);
@@ -41,14 +69,40 @@ export const usePlayerStore = defineStore('player', () => {
     element.addEventListener('timeupdate', () => {
       currentTime.value = element.currentTime || 0;
       if (Number.isFinite(element.duration)) duration.value = element.duration;
+      const work = current.value;
+      if (!work || trackedWorkId !== work.id || duration.value <= 0) return;
+      const ratio = currentTime.value / duration.value;
+      for (const milestone of PLAY_MILESTONES) {
+        if (ratio >= milestone && !reportedMilestones.has(milestone)) {
+          reportedMilestones.add(milestone);
+          trackPlay('play.progress', work, {
+            progress: milestone,
+            position: Math.round(currentTime.value),
+          });
+        }
+      }
     });
     element.addEventListener('loadedmetadata', () => {
       if (Number.isFinite(element.duration)) duration.value = element.duration;
     });
-    element.addEventListener('play', () => { playing.value = true; error.value = ''; });
+    element.addEventListener('play', () => {
+      playing.value = true;
+      error.value = '';
+      const work = current.value;
+      if (!work || trackedWorkId === work.id) return;
+      trackedWorkId = work.id;
+      reportedMilestones.clear();
+      trackPlay('play.started', work, { position: Math.round(element.currentTime || 0) });
+    });
     element.addEventListener('pause', () => { playing.value = false; });
     element.addEventListener('ended', () => {
       playing.value = false;
+      const work = current.value;
+      trackPlay('play.ended', work, {
+        played_seconds: Math.round(element.currentTime || duration.value || 0),
+        completed: true,
+      });
+      resetTrackState();
       if (repeat.value) {
         element.currentTime = 0;
         void element.play().catch(showPlaybackError);
@@ -217,6 +271,7 @@ export const usePlayerStore = defineStore('player', () => {
     currentTime.value = 0;
     duration.value = 0;
     error.value = '';
+    resetTrackState();
   }
 
   return {
